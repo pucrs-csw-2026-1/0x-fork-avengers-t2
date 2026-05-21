@@ -386,11 +386,11 @@
           }
         }
       },
-      "Section": {
+      "Activity": {
         "type": "object",
         "required": [
-          "id_section",
-          "title_section",
+          "id_activity",
+          "title_activity",
           "type",
           "starts_at",
           "ends_at",
@@ -403,14 +403,14 @@
           "created_by"
         ],
         "properties": {
-          "id_section": {
+          "id_activity": {
             "type": "string",
             "example": "sec_01hw"
           },
-          "title_section": {
+          "title_activity": {
             "type": "string"
           },
-          "description_section": {
+          "description_activity": {
             "type": "string"
           },
           "type": {
@@ -429,7 +429,7 @@
             "type": "string",
             "example": "America/Sao_Paulo"
           },
-          "registration_deadline_section": {
+          "registration_deadline_activity": {
             "format": "date-time",
             "type": "string"
           },
@@ -437,7 +437,7 @@
             "format": "uri",
             "type": "string"
           },
-          "capacity_section": {
+          "capacity_activity": {
             "minimum": 1,
             "type": "integer"
           },
@@ -446,10 +446,10 @@
             "description": "Carga horária em minutos — obrigatório para emissão de certificado",
             "type": "integer"
           },
-          "category_section": {
+          "category_activity": {
             "type": "string"
           },
-          "language_section": {
+          "language_activity": {
             "type": "string",
             "example": "pt-BR"
           },
@@ -522,7 +522,7 @@
           "enrolled",
           "available_spots",
           "occupancy_percentage",
-          "sections"
+          "activitys"
         ],
         "properties": {
           "event_id": {
@@ -546,7 +546,7 @@
             "description": "Percentual de ocupação",
             "type": "number"
           },
-          "sections": {
+          "activitys": {
             "type": "object",
             "required": [
               "total",
@@ -781,11 +781,11 @@
         }
       }
     },
-    "/events/{id}/sections": {
+    "/events/{id}/activitys": {
       "get": {
         "summary": "Lista seções do evento",
         "tags": [
-          "Sections"
+          "Activitys"
         ],
         "parameters": [
           {
@@ -805,7 +805,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Section"
+                    "$ref": "#/components/schemas/Activity"
                   }
                 }
               }
@@ -953,7 +953,7 @@
       "description": "CRUD de eventos"
     },
     {
-      "name": "Sections",
+      "name": "Activitys",
       "description": "Seções de eventos"
     },
     {

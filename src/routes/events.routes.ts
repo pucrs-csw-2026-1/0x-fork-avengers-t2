@@ -1,7 +1,7 @@
 import { Type } from '@sinclair/typebox'
 import type { FastifyInstance } from 'fastify'
 import type { Event } from '../schemas/event.schema.js'
-import type { Section } from '../schemas/section.schema.js'
+import type { Activity } from '../schemas/activity.schema.js'
 import type { EventRole } from '../schemas/event-role.schema.js'
 import type { EventsMetrics } from '../schemas/metrics.schema.js'
 
@@ -30,19 +30,19 @@ const MOCK_EVENT: Event = {
   created_by: 'usr_123',
 }
 
-const MOCK_SECTION: Section = {
-  id_section: 'sec_01hw',
-  title_section: 'Introdução à IA',
-  description_section: 'Seção introdutória.',
+const MOCK_SECTION: Activity = {
+  id_activity: 'sec_01hw',
+  title_activity: 'Introdução à IA',
+  description_activity: 'Seção introdutória.',
   type: 'palestra',
   starts_at: '2026-06-15T19:00:00-03:00',
   ends_at: '2026-06-15T20:00:00-03:00',
   timezone: 'America/Sao_Paulo',
   thumbnail_url: 'https://example.com/thumb.jpg',
-  capacity_section: 200,
+  capacity_activity: 200,
   workload_minutes: 60,
-  category_section: 'tecnologia',
-  language_section: 'pt-BR',
+  category_activity: 'tecnologia',
+  language_activity: 'pt-BR',
   created_at: '2026-05-01T10:00:00Z',
   updated_at: '2026-05-10T08:30:00Z',
   deleted_at: null,
@@ -86,7 +86,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
     },
     handler: async (): Promise<EventsMetrics> => ({
       total_events: 1,
-      total_sections: 1,
+      total_activitys: 1,
       total_capacity: 200,
       total_enrolled: 87,
       total_available_spots: 113,
@@ -142,12 +142,12 @@ export async function eventsRoutes(fastify: FastifyInstance) {
     }),
   })
 
-  fastify.get('/events/:id/sections', {
+  fastify.get('/events/:id/activitys', {
     schema: {
-      tags: ['Sections'],
+      tags: ['Activitys'],
       summary: 'Lista seções do evento',
       params: ParamsIdSchema,
-      response: { 200: { type: 'array', items: { $ref: 'Section#' } } },
+      response: { 200: { type: 'array', items: { $ref: 'Activity#' } } },
     },
     handler: async () => [MOCK_SECTION],
   })

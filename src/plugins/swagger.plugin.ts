@@ -19,7 +19,7 @@ export default fp(async function swaggerPlugin(fastify: FastifyInstance) {
       },
       tags: [
         { name: 'Events', description: 'CRUD de eventos' },
-        { name: 'Sections', description: 'Seções de eventos' },
+        { name: 'Activitys', description: 'Seções de eventos' },
         { name: 'Roles', description: 'Roles de matrícula por evento' },
         { name: 'Metrics', description: 'Métricas de ocupação e seções' },
       ],

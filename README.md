@@ -58,7 +58,7 @@ graph TB
         subgraph SCH["TypeBox Schemas"]
             direction LR
             ES["event.schema\nEvent · CreateEvent\nUpdateEvent · EventListResponse"]
-            SS["section.schema\nSection"]
+            SS["activity.schema\nActivity"]
             RS["event-role.schema\nEventRole · CreateEventRole"]
             MS["metrics.schema\nEventMetrics · EventsMetrics"]
         end
@@ -157,18 +157,18 @@ classDiagram
         +String? country
     }
 
-    class Section {
-        +String id_section
-        +String title_section
-        +String? description_section
+    class Activity {
+        +String id_activity
+        +String title_activity
+        +String? description_activity
         +String type
         +DateTime starts_at
         +DateTime ends_at
         +String timezone
-        +Integer? capacity_section
+        +Integer? capacity_activity
         +Integer workload_minutes
-        +String? category_section
-        +String? language_section
+        +String? category_activity
+        +String? language_activity
         +DateTime created_at
         +DateTime updated_at
         +DateTime|null deleted_at
@@ -187,10 +187,10 @@ classDiagram
         +Integer enrolled
         +Integer available_spots
         +Number occupancy_percentage
-        +SectionBreakdown sections
+        +ActivityBreakdown activitys
     }
 
-    class SectionBreakdown {
+    class ActivityBreakdown {
         +Integer total
         +Record~String·Integer~ by_type
         +Integer total_workload_minutes
@@ -198,7 +198,7 @@ classDiagram
 
     class EventsMetrics {
         +Integer total_events
-        +Integer total_sections
+        +Integer total_activitys
         +Integer total_capacity
         +Integer total_enrolled
         +Integer total_available_spots
@@ -214,10 +214,10 @@ classDiagram
     }
 
     Event "1" *-- "1" Location           : location
-    Event "1" *-- "0..*" Section         : sections
+    Event "1" *-- "0..*" Activity         : activitys
     Event "1" *-- "0..*" EventRole       : roles
     Event "1" ..> "1" EventMetrics       : métricas por evento
-    EventMetrics "1" *-- "1" SectionBreakdown
+    EventMetrics "1" *-- "1" ActivityBreakdown
     EventsMetrics "1" *-- "1" EventsByStatus
 ```
 
@@ -237,8 +237,8 @@ graph LR
         E7["DELETE /events/:id\nSoft delete · deleted_at"]
     end
 
-    subgraph SECTIONS["tag: Sections"]
-        S1["GET /events/:id/sections\nLista seções do evento"]
+    subgraph SECTIONS["tag: Activitys"]
+        S1["GET /events/:id/activitys\nLista seções do evento"]
     end
 
     subgraph ROLES["tag: Roles"]
@@ -251,7 +251,7 @@ graph LR
         SC1["Event"]
         SC2["EventListResponse"]
         SC3["EventsMetrics"]
-        SC4["Section"]
+        SC4["Activity"]
         SC5["EventRole"]
     end
 

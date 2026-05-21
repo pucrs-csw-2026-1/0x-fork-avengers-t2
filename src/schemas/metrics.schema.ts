@@ -1,6 +1,6 @@
 import { Type, Static } from '@sinclair/typebox'
 
-const SectionBreakdownSchema = Type.Object({
+const ActivityBreakdownSchema = Type.Object({
   total: Type.Integer({ description: 'Total de seções no evento' }),
   by_type: Type.Record(Type.String(), Type.Integer(), {
     description: 'Contagem de seções agrupadas por tipo',
@@ -21,7 +21,7 @@ export const EventMetricsSchema = Type.Object(
       maximum: 100,
       description: 'Percentual de ocupação',
     }),
-    sections: SectionBreakdownSchema,
+    activitys: ActivityBreakdownSchema,
   },
   { $id: 'EventMetrics' },
 )
@@ -31,7 +31,7 @@ export type EventMetrics = Static<typeof EventMetricsSchema>
 export const EventsMetricsSchema = Type.Object(
   {
     total_events: Type.Integer({ description: 'Total de eventos cadastrados' }),
-    total_sections: Type.Integer({ description: 'Total de seções em todos os eventos' }),
+    total_activitys: Type.Integer({ description: 'Total de seções em todos os eventos' }),
     total_capacity: Type.Integer({ description: 'Soma da capacidade de todos os eventos' }),
     total_enrolled: Type.Integer({ description: 'Total de inscrições em todos os eventos' }),
     total_available_spots: Type.Integer({ description: 'Total de vagas disponíveis' }),

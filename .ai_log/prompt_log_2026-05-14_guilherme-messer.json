@@ -228,7 +228,7 @@
       "cwd": "/home/gui/avengers-t2"
     },
     "role": "assistant",
-    "content": "Os schemas têm `$id` correto mas o Fastify nomeia como `def-N` porque as rotas usam os objetos TypeBox inline. Para que o swagger use os nomes corretos (`Event`, `Section`, etc.), as rotas precisam referenciar via `$ref`. Vou atualizar as rotas:"
+    "content": "Os schemas têm `$id` correto mas o Fastify nomeia como `def-N` porque as rotas usam os objetos TypeBox inline. Para que o swagger use os nomes corretos (`Event`, `Activity`, etc.), as rotas precisam referenciar via `$ref`. Vou atualizar as rotas:"
   },
   {
     "timestamp": "2026-05-14T21:26:16.135Z",
@@ -316,6 +316,6 @@
       "cwd": "/home/gui/avengers-t2"
     },
     "role": "assistant",
-    "content": "Feito. O que mudou:\n\n- **`src/plugins/schemas.plugin.ts`** — registra todos os TypeBox schemas com `addSchema()`\n- **`src/plugins/swagger.plugin.ts`** — adiciona `refResolver.buildLocalReference` que usa `$id` como nome do componente (ao invés do `def-N` padrão do `@fastify/swagger`)\n- **`src/routes/events.routes.ts`** — rotas usam `{ $ref: 'SchemaId#' }` em vez dos objetos TypeBox diretamente\n- **`src/schemas/event.schema.ts`** — `EventListResponseSchema` ganhou `$id: 'EventListResponse'`\n\nNo Swagger UI, a aba **Schemas** agora vai mostrar `Event`, `CreateEvent`, `UpdateEvent`, `Section`, `EventRole`, `CreateEventRole`, `EventMetrics` e `EventListResponse` com nomes legíveis."
+    "content": "Feito. O que mudou:\n\n- **`src/plugins/schemas.plugin.ts`** — registra todos os TypeBox schemas com `addSchema()`\n- **`src/plugins/swagger.plugin.ts`** — adiciona `refResolver.buildLocalReference` que usa `$id` como nome do componente (ao invés do `def-N` padrão do `@fastify/swagger`)\n- **`src/routes/events.routes.ts`** — rotas usam `{ $ref: 'SchemaId#' }` em vez dos objetos TypeBox diretamente\n- **`src/schemas/event.schema.ts`** — `EventListResponseSchema` ganhou `$id: 'EventListResponse'`\n\nNo Swagger UI, a aba **Schemas** agora vai mostrar `Event`, `CreateEvent`, `UpdateEvent`, `Activity`, `EventRole`, `CreateEventRole`, `EventMetrics` e `EventListResponse` com nomes legíveis."
   }
 ]
