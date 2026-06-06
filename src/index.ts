@@ -16,7 +16,7 @@ async function main() {
   await server.register(schemasPlugin)
   await server.register(eventsRoutes)
 
-  const address = await server.listen({ port: env.PORT, host: '0.0.0.0' })
+  const address = await server.listen({ port: env.PORT, host: env.HOST })
   console.log(`Server running at ${address}`)
   console.log(`Swagger UI: ${address}/docs`)
 }
