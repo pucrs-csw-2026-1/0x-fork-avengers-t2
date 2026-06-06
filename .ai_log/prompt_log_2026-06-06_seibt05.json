@@ -416,5 +416,126 @@
     },
     "role": "assistant",
     "content": "Conflitos resolvidos nas edições. Agora marco todos como resolvidos e verifico:"
+  },
+  {
+    "timestamp": "2026-06-06T15:21:05.998Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "user",
+    "content": "Contexto: microsserviço de gerenciamento de eventos em Fastify 5 + TypeScript + TypeBox.\nSub-issue de #1. Porta e host estão hardcoded em src/index.ts, sem nenhum .env ou validação.\nRepositório: https://github.com/pucrs-csw-2026-1/avengers-t2\n\nTask #3: [INFRA] Configurar variáveis de ambiente (.env + validação)\n\nAntes de começar:\n- git checkout dev && git pull origin dev\n- git checkout -b issue-3-infra-env-config\n\nO que implementar:\n\n1. Instalar dependências\n   - npm install zod dotenv\n\n2. Criar src/config/env.ts\n   - Carregar variáveis com dotenv\n   - Validar com Zod e exportar objeto `env` tipado com:\n     - PORT (número, default 3000)\n     - HOST (string, default '0.0.0.0')\n     - NODE_ENV (enum: development | production | test, default development)\n     - DATABASE_URL (string, obrigatória)\n     - AUTH_SERVICE_URL (string, obrigatória)\n   - Se a validação falhar, logar o erro e encerrar o processo com exit(1)\n\n3. Criar .env.example na raiz com todos os valores de exemplo:\n   PORT=3000\n   HOST=0.0.0.0\n   NODE_ENV=development\n   DATABASE_URL=postgresql://events_user:events_pass@localhost:5432/events_db\n   AUTH_SERVICE_URL=http://localhost:4000\n\n4. Criar .env na raiz (apenas local, nunca commitar) copiando os valores do .env.example\n\n5. Atualizar src/index.ts\n   - Importar env de src/config/env.ts\n   - Substituir port: 3000 e host: '0.0.0.0' por env.PORT e env.HOST\n\n6. Confirmar que .env está no .gitignore (já está, só verificar)\n\n7. Atualizar vitest.config.ts para definir as variáveis de ambiente no ambiente de teste:\n   - NODE_ENV=test\n   - DATABASE_URL=postgresql://localhost:5432/events_test\n   - AUTH_SERVICE_URL=http://localhost:4000\n\nNÃO commitar nada. Apenas implementar e avisar quando estiver pronto para eu testar manualmente, além disso me de os comandos para fazer os testes manualmente."
+  },
+  {
+    "timestamp": "2026-06-06T15:21:21.810Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "A maioria dessa task já está implementada pela #1. Vou verificar o que falta antes de criar a branch."
+  },
+  {
+    "timestamp": "2026-06-06T15:21:36.528Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "O delta é pequeno: falta `HOST` em três lugares, o tratamento de erro precisa ser `exit(1)` explícito, e `src/index.ts` ainda tem `host: '0.0.0.0'` hardcoded. Crio a branch e implemento."
+  },
+  {
+    "timestamp": "2026-06-06T15:22:31.216Z",
+    "source": "claude",
+    "git_branch": "issue-3-infra-env-config",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Agora crio o `.env` local copiando o exemplo e atualizo o `DATABASE_URL` para bater com o container que está rodando:"
+  },
+  {
+    "timestamp": "2026-06-06T15:23:02.890Z",
+    "source": "claude",
+    "git_branch": "issue-3-infra-env-config",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Tudo implementado. Confirmo os testes passando:"
+  },
+  {
+    "timestamp": "2026-06-06T15:23:15.204Z",
+    "source": "claude",
+    "git_branch": "issue-3-infra-env-config",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "18/18 passando. Pronto para testar manualmente.\n\n---\n\n**O que mudou:**\n- `env.ts` — adicionado `HOST`, erro agora usa `safeParse` + `process.exit(1)` com mensagem clara\n- `src/index.ts` — `host: env.HOST` em vez de `'0.0.0.0'` hardcoded\n- `.env.example` — adicionado `HOST=0.0.0.0`\n- `.env` (local) — adicionado `HOST=0.0.0.0`\n- `vitest.config.ts` — adicionado `HOST` nas vars de teste\n\n---\n\n**Para testar manualmente:**\n\n```powershell\n# Subir o servidor (postgres já está rodando)\nnpm run dev\n```\n\nDeve aparecer `Server listening at http://0.0.0.0:3000`. Teste no Swagger:\n\n```\nhttp://localhost:3000/docs\n```\n\n**Para validar o exit(1):** remova temporariamente o `DATABASE_URL` do `.env` e rode `npm run dev` — deve logar o erro e encerrar o processo em vez de lançar uma exceção crua."
+  },
+  {
+    "timestamp": "2026-06-06T15:25:36.001Z",
+    "source": "claude",
+    "git_branch": "issue-3-infra-env-config",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "user",
+    "content": "Devo remover todo ele ou só o endereço?"
+  },
+  {
+    "timestamp": "2026-06-06T15:25:40.323Z",
+    "source": "claude",
+    "git_branch": "issue-3-infra-env-config",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Só comente ou remova a linha do valor, deixando assim:\n\n```env\nPORT=3000\nHOST=0.0.0.0\nNODE_ENV=development\n# DATABASE_URL=postgresql://postgres:password@localhost:5432/events_db\nAUTH_SERVICE_URL=http://localhost:4000\nPOSTGRES_USER=postgres\nPOSTGRES_PASSWORD=password\nPOSTGRES_DB=events_db\n```\n\nAí roda `npm run dev` e deve aparecer a mensagem de erro e o processo encerrar. Depois descomenta de volta."
+  },
+  {
+    "timestamp": "2026-06-06T15:26:05.496Z",
+    "source": "claude",
+    "git_branch": "issue-3-infra-env-config",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "user",
+    "content": "PS C:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2> npm run dev\n>> \n\n> events-api@1.0.0 dev\n> tsx watch src/index.ts\n\nInvalid environment variables:\n{\n  _errors: [],\n  DATABASE_URL: { _errors: [ 'Invalid input: expected string, received undefined' ] }"
+  },
+  {
+    "timestamp": "2026-06-06T15:26:08.359Z",
+    "source": "claude",
+    "git_branch": "issue-3-infra-env-config",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Funcionou perfeitamente — o `safeParse` + `exit(1)` está operando como esperado. Restaure o `DATABASE_URL` no `.env` e me avisa para commitar e abrir o PR."
+  },
+  {
+    "timestamp": "2026-06-06T15:28:45.332Z",
+    "source": "claude",
+    "git_branch": "issue-3-infra-env-config",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "user",
+    "content": "Pode commitar e abrir o PR"
   }
 ]
