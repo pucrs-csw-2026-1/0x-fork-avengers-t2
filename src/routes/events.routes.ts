@@ -60,8 +60,8 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       body: { $ref: 'CreateEvent#' },
       response: { 201: { $ref: 'Event#' } },
     },
-    handler: async (_req, reply) => {
-      reply.status(201).send({ ...MOCK_EVENT, id: 'evt_new_' + Date.now() })
+    handler: async (req, reply) => {
+      reply.status(201).send({ ...MOCK_EVENT, id: 'evt_new_' + Date.now(), created_by: req.user.id })
     },
   })
 
@@ -135,10 +135,10 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       params: ParamsIdSchema,
       response: { 200: { $ref: 'Event#' } },
     },
-    handler: async () => ({
+    handler: async (req) => ({
       ...MOCK_EVENT,
       deleted_at: new Date().toISOString(),
-      deleted_by: 'usr_123',
+      deleted_by: req.user.id,
     }),
   })
 
@@ -149,7 +149,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       params: ParamsIdSchema,
       response: { 200: { type: 'array', items: { $ref: 'Activity#' } } },
     },
-    handler: async () => [MOCK_SECTION],
+    handler: async (req) => [{ ...MOCK_SECTION, created_by: req.user.id }],
   })
 
   fastify.get('/events/:id/roles', {
