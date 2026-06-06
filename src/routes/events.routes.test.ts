@@ -1,15 +1,50 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import type { FastifyInstance } from 'fastify'
-import { buildApp } from '../test/app.js'
+import { generateKeyPair, exportJWK, SignJWT, createLocalJWKSet } from 'jose'
+import { buildAppWithAuth } from '../test/app.js'
 
 let app: FastifyInstance
+let token: string
+const TEST_USER_ID = 'usr_test_uuid_001'
 
 beforeAll(async () => {
-  app = await buildApp()
+  const { privateKey, publicKey } = await generateKeyPair('RS256')
+  const publicJwk = { ...(await exportJWK(publicKey)), kid: 'test-key-1', alg: 'RS256', use: 'sig' }
+  const jwks = createLocalJWKSet({ keys: [publicJwk] })
+
+  app = await buildAppWithAuth(jwks)
+
+  token = await new SignJWT({
+    scopes: ['participant', 'manager', 'admin'],
+    principal_type: 'user',
+  })
+    .setProtectedHeader({ alg: 'RS256', kid: 'test-key-1' })
+    .setSubject(TEST_USER_ID)
+    .setIssuedAt()
+    .setExpirationTime('1h')
+    .sign(privateKey)
 })
 
 afterAll(async () => {
   await app.close()
+})
+
+const auth = () => ({ authorization: `Bearer ${token}` })
+
+describe('autenticação', () => {
+  it('requisição sem token → 401', async () => {
+    const res = await app.inject({ method: 'GET', url: '/events' })
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('requisição com token inválido → 401', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/events',
+      headers: { authorization: 'Bearer token.invalido.aqui' },
+    })
+    expect(res.statusCode).toBe(401)
+  })
 })
 
 describe('POST /events', () => {
@@ -17,13 +52,14 @@ describe('POST /events', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/events',
+      headers: auth(),
       payload: {
         title: 'Evento Teste',
         starts_at: '2026-07-01T09:00:00Z',
         ends_at: '2026-07-01T18:00:00Z',
         timezone: 'America/Sao_Paulo',
         capacity: 100,
-        created_by: 'usr_test',
+        created_by: 'ignorado',
       },
     })
 
@@ -32,22 +68,23 @@ describe('POST /events', () => {
     expect(body).toHaveProperty('id')
     expect(body).toHaveProperty('title')
     expect(body).toHaveProperty('created_at')
+    expect(body.created_by).toBe(TEST_USER_ID)
   })
 
   it('rejeita body inválido com 400', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/events',
+      headers: auth(),
       payload: { title: 'Sem campos obrigatórios' },
     })
-
     expect(res.statusCode).toBe(400)
   })
 })
 
 describe('GET /events', () => {
   it('retorna lista paginada com 200', async () => {
-    const res = await app.inject({ method: 'GET', url: '/events' })
+    const res = await app.inject({ method: 'GET', url: '/events', headers: auth() })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -59,21 +96,19 @@ describe('GET /events', () => {
   })
 
   it('aceita query params de paginação', async () => {
-    const res = await app.inject({ method: 'GET', url: '/events?page=2&limit=10' })
-
+    const res = await app.inject({ method: 'GET', url: '/events?page=2&limit=10', headers: auth() })
     expect(res.statusCode).toBe(200)
   })
 
   it('rejeita page=0 com 400', async () => {
-    const res = await app.inject({ method: 'GET', url: '/events?page=0' })
-
+    const res = await app.inject({ method: 'GET', url: '/events?page=0', headers: auth() })
     expect(res.statusCode).toBe(400)
   })
 })
 
 describe('GET /events/metrics', () => {
   it('retorna métricas agregadas com 200', async () => {
-    const res = await app.inject({ method: 'GET', url: '/events/metrics' })
+    const res = await app.inject({ method: 'GET', url: '/events/metrics', headers: auth() })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -93,12 +128,13 @@ describe('GET /events/metrics', () => {
 
 describe('GET /events/:id', () => {
   it('retorna evento por ID com 200', async () => {
-    const res = await app.inject({ method: 'GET', url: '/events/evt_01hw' })
+    const res = await app.inject({ method: 'GET', url: '/events/evt_01hw', headers: auth() })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(body).toHaveProperty('id')
     expect(body).toHaveProperty('title')
+    expect(body.created_by).toBe(TEST_USER_ID)
   })
 })
 
@@ -107,28 +143,30 @@ describe('PUT /events/:id', () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/events/evt_01hw',
+      headers: auth(),
       payload: {
         title: 'Evento Atualizado',
         starts_at: '2026-07-01T09:00:00Z',
         ends_at: '2026-07-01T18:00:00Z',
         timezone: 'America/Sao_Paulo',
         capacity: 150,
-        created_by: 'usr_test',
+        created_by: 'ignorado',
       },
     })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(body).toHaveProperty('id')
+    expect(body.created_by).toBe(TEST_USER_ID)
   })
 
   it('rejeita body inválido com 400', async () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/events/evt_01hw',
+      headers: auth(),
       payload: {},
     })
-
     expect(res.statusCode).toBe(400)
   })
 })
@@ -138,40 +176,42 @@ describe('PATCH /events/:id', () => {
     const res = await app.inject({
       method: 'PATCH',
       url: '/events/evt_01hw',
+      headers: auth(),
       payload: { title: 'Novo Título' },
     })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(body).toHaveProperty('id')
+    expect(body.created_by).toBe(TEST_USER_ID)
   })
 
   it('aceita body vazio', async () => {
     const res = await app.inject({
       method: 'PATCH',
       url: '/events/evt_01hw',
+      headers: auth(),
       payload: {},
     })
-
     expect(res.statusCode).toBe(200)
   })
 })
 
 describe('DELETE /events/:id', () => {
-  it('faz soft delete e retorna 200 com deleted_at preenchido', async () => {
-    const res = await app.inject({ method: 'DELETE', url: '/events/evt_01hw' })
+  it('faz soft delete e retorna 200 com deleted_at e deleted_by do token', async () => {
+    const res = await app.inject({ method: 'DELETE', url: '/events/evt_01hw', headers: auth() })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(body).toHaveProperty('deleted_at')
     expect(body.deleted_at).not.toBeNull()
-    expect(body).toHaveProperty('deleted_by')
+    expect(body.deleted_by).toBe(TEST_USER_ID)
   })
 })
 
 describe('GET /events/:id/activitys', () => {
   it('lista seções do evento com 200', async () => {
-    const res = await app.inject({ method: 'GET', url: '/events/evt_01hw/activitys' })
+    const res = await app.inject({ method: 'GET', url: '/events/evt_01hw/activitys', headers: auth() })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -179,12 +219,13 @@ describe('GET /events/:id/activitys', () => {
     expect(body.length).toBeGreaterThan(0)
     expect(body[0]).toHaveProperty('id_activity')
     expect(body[0]).toHaveProperty('workload_minutes')
+    expect(body[0].created_by).toBe(TEST_USER_ID)
   })
 })
 
 describe('GET /events/:id/roles', () => {
   it('lista roles do evento com 200', async () => {
-    const res = await app.inject({ method: 'GET', url: '/events/evt_01hw/roles' })
+    const res = await app.inject({ method: 'GET', url: '/events/evt_01hw/roles', headers: auth() })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -195,8 +236,7 @@ describe('GET /events/:id/roles', () => {
   })
 
   it('retorna event_id igual ao parâmetro da URL', async () => {
-    const res = await app.inject({ method: 'GET', url: '/events/evt_01hw/roles' })
-
+    const res = await app.inject({ method: 'GET', url: '/events/evt_01hw/roles', headers: auth() })
     const body = res.json()
     expect(body[0].event_id).toBe('evt_01hw')
   })
@@ -207,6 +247,7 @@ describe('POST /events/:id/roles', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/events/evt_01hw/roles',
+      headers: auth(),
       payload: { role: 'staff' },
     })
 
@@ -220,9 +261,9 @@ describe('POST /events/:id/roles', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/events/evt_01hw/roles',
+      headers: auth(),
       payload: {},
     })
-
     expect(res.statusCode).toBe(400)
   })
 })
@@ -232,6 +273,7 @@ describe('DELETE /events/:id/roles/:role', () => {
     const res = await app.inject({
       method: 'DELETE',
       url: '/events/evt_01hw/roles/staff',
+      headers: auth(),
     })
 
     expect(res.statusCode).toBe(204)
