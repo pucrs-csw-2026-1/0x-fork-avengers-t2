@@ -11,6 +11,7 @@ API REST para gerenciamento de eventos, seções e matrículas, construída com 
 | Documentação | @fastify/swagger + @fastify/swagger-ui |
 | Linguagem | TypeScript 5 |
 | Testes | Vitest 2 |
+| Linting | ESLint + typescript-eslint |
 | Runtime dev | tsx |
 | Banco de dados | PostgreSQL 16 (Docker) |
 | ORM + Migrations | Drizzle ORM + drizzle-kit |
@@ -76,6 +77,7 @@ npm test
 npm run dev            # servidor com hot-reload
 npm run build          # compila TypeScript → dist/
 npm run start          # executa build compilado
+npm run lint           # verifica qualidade do código com ESLint
 npm run test           # roda testes com Vitest
 npm run generate-spec  # gera docs/openapi.json
 
@@ -228,8 +230,10 @@ classDiagram
         +DateTime starts_at
         +DateTime ends_at
         +String timezone
+        +String? thumbnail_url
         +Integer? capacity_activity
         +Integer workload_minutes
+        +DateTime? registration_deadline_activity
         +String? category_activity
         +String? language_activity
         +DateTime created_at
@@ -329,6 +333,24 @@ graph LR
 ---
 
 ### Pipeline CI/CD
+
+**ci.yml** — executa em todo push e PR para `dev` e `main`:
+
+```mermaid
+flowchart LR
+    TRIGGER(["Push / PR\n→ dev ou main"])
+    CO["checkout@v4"]
+    ND["setup-node@v4\nNode 22  ·  cache npm"]
+    NI["npm ci"]
+    LN["npm run lint\nESLint + typescript-eslint"]
+    TC["npm run build\ntsc — type check"]
+    UT["npm test\nVitest — testes unitários"]
+    OK(["✓ CI passou"])
+
+    TRIGGER --> CO --> ND --> NI --> LN --> TC --> UT --> OK
+```
+
+**docs.yml** — executa no merge para `main`:
 
 ```mermaid
 flowchart LR
