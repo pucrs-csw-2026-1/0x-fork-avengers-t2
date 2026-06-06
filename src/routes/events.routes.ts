@@ -5,7 +5,7 @@ import type { Activity } from '../schemas/activity.schema.js'
 import type { EventRole } from '../schemas/event-role.schema.js'
 import type { EventsMetrics } from '../schemas/metrics.schema.js'
 
-const MOCK_EVENT: Event = {
+const MOCK_EVENT: Omit<Event, 'created_by'> = {
   id: 'evt_01hw',
   title: 'Inteligência Artificial na Prática',
   description: 'Descrição do evento.',
@@ -27,10 +27,9 @@ const MOCK_EVENT: Event = {
   updated_at: '2026-05-10T08:30:00Z',
   deleted_at: null,
   deleted_by: null,
-  created_by: 'usr_123',
 }
 
-const MOCK_SECTION: Activity = {
+const MOCK_SECTION: Omit<Activity, 'created_by'> = {
   id_activity: 'sec_01hw',
   title_activity: 'Introdução à IA',
   description_activity: 'Seção introdutória.',
@@ -47,7 +46,6 @@ const MOCK_SECTION: Activity = {
   updated_at: '2026-05-10T08:30:00Z',
   deleted_at: null,
   deleted_by: null,
-  created_by: 'usr_123',
 }
 
 const ParamsIdSchema = Type.Object({ id: Type.String() })
@@ -75,7 +73,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       }),
       response: { 200: { $ref: 'EventListResponse#' } },
     },
-    handler: async () => ({ data: [MOCK_EVENT], total: 1, page: 1, limit: 20 }),
+    handler: async (req) => ({ data: [{ ...MOCK_EVENT, created_by: req.user.id }], total: 1, page: 1, limit: 20 }),
   })
 
   fastify.get('/events/metrics', {
@@ -103,7 +101,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       params: ParamsIdSchema,
       response: { 200: { $ref: 'Event#' } },
     },
-    handler: async () => MOCK_EVENT,
+    handler: async (req) => ({ ...MOCK_EVENT, created_by: req.user.id }),
   })
 
   fastify.put('/events/:id', {
@@ -114,7 +112,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       body: { $ref: 'CreateEvent#' },
       response: { 200: { $ref: 'Event#' } },
     },
-    handler: async () => MOCK_EVENT,
+    handler: async (req) => ({ ...MOCK_EVENT, created_by: req.user.id }),
   })
 
   fastify.patch('/events/:id', {
@@ -125,7 +123,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       body: { $ref: 'UpdateEvent#' },
       response: { 200: { $ref: 'Event#' } },
     },
-    handler: async () => MOCK_EVENT,
+    handler: async (req) => ({ ...MOCK_EVENT, created_by: req.user.id }),
   })
 
   fastify.delete('/events/:id', {
@@ -137,6 +135,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
     },
     handler: async (req) => ({
       ...MOCK_EVENT,
+      created_by: req.user.id,
       deleted_at: new Date().toISOString(),
       deleted_by: req.user.id,
     }),
