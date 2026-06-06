@@ -1,7 +1,20 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest'
 import type { FastifyInstance } from 'fastify'
 import { generateKeyPair, exportJWK, SignJWT, createLocalJWKSet } from 'jose'
 import { buildAppWithAuth } from '../test/app.js'
+
+vi.mock('../repositories/event.repository.js', () => ({
+  eventRepository: {
+    create: vi.fn(),
+    findAll: vi.fn(),
+    findById: vi.fn(),
+    update: vi.fn(),
+    partialUpdate: vi.fn(),
+    softDelete: vi.fn(),
+  },
+}))
+
+import { eventRepository } from '../repositories/event.repository.js'
 
 let app: FastifyInstance
 let token: string
@@ -29,6 +42,10 @@ afterAll(async () => {
   await app.close()
 })
 
+beforeEach(() => {
+  vi.resetAllMocks()
+})
+
 const auth = () => ({ authorization: `Bearer ${token}` })
 
 describe('autenticação', () => {
@@ -48,27 +65,66 @@ describe('autenticação', () => {
 })
 
 describe('POST /events', () => {
-  it('cria evento e retorna 201', async () => {
+  const MOCK_CREATED_EVENT = {
+    id: 'b3b74c7a-f1c5-4b2e-9e3f-000000000001',
+    title: 'Evento Teste',
+    starts_at: '2026-07-01T09:00:00.000Z',
+    ends_at: '2026-07-01T18:00:00.000Z',
+    timezone: 'America/Sao_Paulo',
+    capacity: 100,
+    created_at: '2026-06-06T12:00:00.000Z',
+    updated_at: '2026-06-06T12:00:00.000Z',
+    deleted_at: null,
+    deleted_by: null,
+    created_by: TEST_USER_ID,
+  }
+
+  const validPayload = {
+    title: 'Evento Teste',
+    starts_at: '2026-07-01T09:00:00Z',
+    ends_at: '2026-07-01T18:00:00Z',
+    timezone: 'America/Sao_Paulo',
+    capacity: 100,
+  }
+
+  it('cria evento e retorna 201 com id UUID', async () => {
+    vi.mocked(eventRepository.create).mockResolvedValue(MOCK_CREATED_EVENT)
+
     const res = await app.inject({
       method: 'POST',
       url: '/events',
       headers: auth(),
-      payload: {
-        title: 'Evento Teste',
-        starts_at: '2026-07-01T09:00:00Z',
-        ends_at: '2026-07-01T18:00:00Z',
-        timezone: 'America/Sao_Paulo',
-        capacity: 100,
-        created_by: 'ignorado',
-      },
+      payload: validPayload,
     })
 
     expect(res.statusCode).toBe(201)
     const body = res.json()
-    expect(body).toHaveProperty('id')
-    expect(body).toHaveProperty('title')
+    expect(body).toHaveProperty('id', MOCK_CREATED_EVENT.id)
+    expect(body).toHaveProperty('title', 'Evento Teste')
     expect(body).toHaveProperty('created_at')
-    expect(body.created_by).toBe(TEST_USER_ID)
+    expect(vi.mocked(eventRepository.create)).toHaveBeenCalledOnce()
+  })
+
+  it('created_by vem do token JWT, não do body', async () => {
+    vi.mocked(eventRepository.create).mockResolvedValue(MOCK_CREATED_EVENT)
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/events',
+      headers: auth(),
+      payload: validPayload,
+    })
+
+    expect(res.statusCode).toBe(201)
+    expect(res.json().created_by).toBe(TEST_USER_ID)
+
+    const callArg = vi.mocked(eventRepository.create).mock.calls[0][0]
+    expect(callArg.created_by).toBe(TEST_USER_ID)
+  })
+
+  it('sem token → 401', async () => {
+    const res = await app.inject({ method: 'POST', url: '/events', payload: validPayload })
+    expect(res.statusCode).toBe(401)
   })
 
   it('rejeita body inválido com 400', async () => {
