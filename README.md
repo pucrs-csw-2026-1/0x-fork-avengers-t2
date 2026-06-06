@@ -12,6 +12,63 @@ API REST para gerenciamento de eventos, seções e matrículas, construída com 
 | Linguagem | TypeScript 5 |
 | Testes | Vitest 2 |
 | Runtime dev | tsx |
+| Banco de dados | PostgreSQL 16 (Docker) |
+| ORM + Migrations | Drizzle ORM + drizzle-kit |
+| Validação de env | Zod |
+
+## Como rodar localmente
+
+### Pré-requisitos
+
+- Node.js 22+
+- Docker + Docker Compose
+
+### 1. Instalar dependências
+
+```bash
+npm install
+```
+
+### 2. Configurar variáveis de ambiente
+
+```bash
+cp .env.example .env
+```
+
+Edite o `.env` se precisar alterar usuário, senha ou porta do banco. Os valores padrão já funcionam com o Docker Compose incluído.
+
+### 3. Subir o banco de dados
+
+```bash
+npm run db:up
+```
+
+Sobe um container PostgreSQL 16 na porta `5432` com volume persistente.
+
+### 4. Aplicar as migrations
+
+```bash
+npm run db:migrate
+```
+
+Cria as tabelas `events`, `activities` e `event_roles` no banco.
+
+### 5. Iniciar o servidor
+
+```bash
+npm run dev
+```
+
+Servidor disponível em `http://localhost:3000`  
+Swagger UI disponível em `http://localhost:3000/docs`
+
+### 6. Rodar os testes
+
+```bash
+npm test
+```
+
+---
 
 ## Scripts
 
@@ -21,6 +78,12 @@ npm run build          # compila TypeScript → dist/
 npm run start          # executa build compilado
 npm run test           # roda testes com Vitest
 npm run generate-spec  # gera docs/openapi.json
+
+npm run db:up          # sobe o PostgreSQL via Docker Compose
+npm run db:down        # para e remove o container
+npm run db:generate    # gera arquivos de migration a partir do schema
+npm run db:migrate     # aplica migrations no banco
+npm run db:studio      # abre o Drizzle Studio (interface visual do banco)
 ```
 
 A documentação interativa fica disponível em `http://localhost:3000/docs` após iniciar o servidor.
