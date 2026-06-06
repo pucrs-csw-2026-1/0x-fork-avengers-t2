@@ -394,5 +394,27 @@
     },
     "role": "assistant",
     "content": "6 commits organizados. Agora push e PR."
+  },
+  {
+    "timestamp": "2026-06-06T15:01:33.782Z",
+    "source": "claude",
+    "git_branch": "issue-2-infra-orm-setup",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Agora removo a migration duplicada do #30 (o dev já tem `0000_elite_roughhouse.sql`):"
+  },
+  {
+    "timestamp": "2026-06-06T15:01:44.369Z",
+    "source": "claude",
+    "git_branch": "issue-2-infra-orm-setup",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Conflitos resolvidos nas edições. Agora marco todos como resolvidos e verifico:"
   }
 ]
