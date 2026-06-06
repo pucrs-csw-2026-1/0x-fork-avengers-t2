@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { getTableColumns } from 'drizzle-orm'
 import { events, activities, eventRoles } from './schema.js'
 
+type ColMap = Record<string, { notNull: boolean; hasDefault: boolean; primary?: boolean }>
+
 describe('events table schema', () => {
-  const cols = getTableColumns(events)
+  const cols = getTableColumns(events) as ColMap
   const columnNames = Object.keys(cols)
 
   it('has all required columns', () => {
@@ -44,7 +46,7 @@ describe('events table schema', () => {
 })
 
 describe('activities table schema', () => {
-  const cols = getTableColumns(activities)
+  const cols = getTableColumns(activities) as ColMap
   const columnNames = Object.keys(cols)
 
   it('has all required columns', () => {
@@ -89,7 +91,7 @@ describe('activities table schema', () => {
 })
 
 describe('event_roles table schema', () => {
-  const cols = getTableColumns(eventRoles)
+  const cols = getTableColumns(eventRoles) as ColMap
   const columnNames = Object.keys(cols)
 
   it('has event_id and role as composite primary key columns', () => {
