@@ -1,6 +1,7 @@
 import Fastify from 'fastify'
 import swaggerPlugin from './plugins/swagger.plugin.js'
 import schemasPlugin from './plugins/schemas.plugin.js'
+import authPlugin from './plugins/auth.plugin.js'
 import { eventsRoutes } from './routes/events.routes.js'
 import { env } from './config/env.js'
 import { closeDb } from './db/index.js'
@@ -14,6 +15,7 @@ server.addHook('onClose', async () => {
 async function main() {
   await server.register(swaggerPlugin)
   await server.register(schemasPlugin)
+  await server.register(authPlugin)
   await server.register(eventsRoutes)
 
   const address = await server.listen({ port: env.PORT, host: env.HOST })
