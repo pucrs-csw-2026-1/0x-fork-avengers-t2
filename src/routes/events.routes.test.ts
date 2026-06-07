@@ -139,21 +139,85 @@ describe('POST /events', () => {
 })
 
 describe('GET /events', () => {
-  it('retorna lista paginada com 200', async () => {
+  const MOCK_EVENT_ITEM = {
+    id: 'evt_001',
+    title: 'Evento Listado',
+    starts_at: '2026-07-01T09:00:00.000Z',
+    ends_at: '2026-07-01T18:00:00.000Z',
+    timezone: 'America/Sao_Paulo',
+    capacity: 100,
+    created_at: '2026-06-06T12:00:00.000Z',
+    updated_at: '2026-06-06T12:00:00.000Z',
+    deleted_at: null,
+    deleted_by: null,
+    created_by: TEST_USER_ID,
+  }
+
+  it('sem token → 401', async () => {
+    const res = await app.inject({ method: 'GET', url: '/events' })
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('retorna { data, total, page, limit } com 200', async () => {
+    vi.mocked(eventRepository.findAll).mockResolvedValue({
+      data: [MOCK_EVENT_ITEM],
+      total: 1,
+      page: 1,
+      limit: 20,
+    })
+
     const res = await app.inject({ method: 'GET', url: '/events', headers: auth() })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(body).toHaveProperty('data')
-    expect(body).toHaveProperty('total')
-    expect(body).toHaveProperty('page')
-    expect(body).toHaveProperty('limit')
+    expect(body).toHaveProperty('total', 1)
+    expect(body).toHaveProperty('page', 1)
+    expect(body).toHaveProperty('limit', 20)
     expect(Array.isArray(body.data)).toBe(true)
+    expect(body.data[0].id).toBe('evt_001')
   })
 
-  it('aceita query params de paginação', async () => {
-    const res = await app.inject({ method: 'GET', url: '/events?page=2&limit=10', headers: auth() })
+  it('repassa page e limit corretos ao repositório', async () => {
+    vi.mocked(eventRepository.findAll).mockResolvedValue({
+      data: [],
+      total: 0,
+      page: 2,
+      limit: 5,
+    })
+
+    await app.inject({ method: 'GET', url: '/events?page=2&limit=5', headers: auth() })
+
+    expect(vi.mocked(eventRepository.findAll)).toHaveBeenCalledWith({ page: 2, limit: 5 })
+  })
+
+  it('aplica defaults page=1 e limit=20 quando não informados', async () => {
+    vi.mocked(eventRepository.findAll).mockResolvedValue({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+    })
+
+    await app.inject({ method: 'GET', url: '/events', headers: auth() })
+
+    expect(vi.mocked(eventRepository.findAll)).toHaveBeenCalledWith({ page: 1, limit: 20 })
+  })
+
+  it('banco vazio → data: [], total: 0', async () => {
+    vi.mocked(eventRepository.findAll).mockResolvedValue({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+    })
+
+    const res = await app.inject({ method: 'GET', url: '/events', headers: auth() })
+
     expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.data).toEqual([])
+    expect(body.total).toBe(0)
   })
 
   it('rejeita page=0 com 400', async () => {
