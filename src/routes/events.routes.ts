@@ -1,6 +1,6 @@
 import { Type } from '@sinclair/typebox'
 import type { FastifyInstance } from 'fastify'
-import type { Event, CreateEventBody } from '../schemas/event.schema.js'
+import type { Event, CreateEventBody, UpdateEvent } from '../schemas/event.schema.js'
 import type { Activity } from '../schemas/activity.schema.js'
 import type { EventRole } from '../schemas/event-role.schema.js'
 import type { EventsMetrics } from '../schemas/metrics.schema.js'
@@ -125,10 +125,21 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       tags: ['Events'],
       summary: 'Atualiza evento completo',
       params: ParamsIdSchema,
-      body: { $ref: 'CreateEvent#' },
-      response: { 200: { $ref: 'Event#' } },
+      body: { $ref: 'CreateEventBody#' },
+      response: {
+        200: { $ref: 'Event#' },
+        404: Type.Object({ error: Type.String() }),
+      },
     },
-    handler: async (req) => ({ ...MOCK_EVENT, created_by: req.user.id }),
+    handler: async (req, reply) => {
+      const { id } = req.params as { id: string }
+      const body = req.body as CreateEventBody
+      const event = await eventRepository.update(id, { ...body, created_by: req.user.id })
+      if (!event) {
+        return reply.status(404).send({ error: 'Evento não encontrado' })
+      }
+      return reply.send(event)
+    },
   })
 
   fastify.patch('/events/:id', {
@@ -137,9 +148,20 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       summary: 'Atualiza evento parcialmente',
       params: ParamsIdSchema,
       body: { $ref: 'UpdateEvent#' },
-      response: { 200: { $ref: 'Event#' } },
+      response: {
+        200: { $ref: 'Event#' },
+        404: Type.Object({ error: Type.String() }),
+      },
     },
-    handler: async (req) => ({ ...MOCK_EVENT, created_by: req.user.id }),
+    handler: async (req, reply) => {
+      const { id } = req.params as { id: string }
+      const body = req.body as UpdateEvent
+      const event = await eventRepository.partialUpdate(id, body)
+      if (!event) {
+        return reply.status(404).send({ error: 'Evento não encontrado' })
+      }
+      return reply.send(event)
+    },
   })
 
   fastify.delete('/events/:id', {

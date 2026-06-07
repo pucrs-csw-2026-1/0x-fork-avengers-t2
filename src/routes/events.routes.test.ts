@@ -349,31 +349,85 @@ describe('GET /events/:id', () => {
 })
 
 describe('PUT /events/:id', () => {
+  const MOCK_UPDATED_EVENT = {
+    id: 'evt-update-test',
+    title: 'Evento Atualizado',
+    starts_at: '2026-07-01T09:00:00.000Z',
+    ends_at: '2026-07-01T18:00:00.000Z',
+    timezone: 'America/Sao_Paulo',
+    capacity: 150,
+    created_at: '2026-06-06T12:00:00.000Z',
+    updated_at: '2026-06-07T10:00:00.000Z',
+    deleted_at: null,
+    deleted_by: null,
+    created_by: TEST_USER_ID,
+  }
+
+  const validPutPayload = {
+    title: 'Evento Atualizado',
+    starts_at: '2026-07-01T09:00:00Z',
+    ends_at: '2026-07-01T18:00:00Z',
+    timezone: 'America/Sao_Paulo',
+    capacity: 150,
+  }
+
+  it('sem token → 401', async () => {
+    const res = await app.inject({ method: 'PUT', url: '/events/evt-update-test', payload: validPutPayload })
+    expect(res.statusCode).toBe(401)
+  })
+
   it('atualiza evento completo e retorna 200', async () => {
+    vi.mocked(eventRepository.update).mockResolvedValue(MOCK_UPDATED_EVENT)
+
     const res = await app.inject({
       method: 'PUT',
-      url: '/events/evt_01hw',
+      url: '/events/evt-update-test',
       headers: auth(),
-      payload: {
-        title: 'Evento Atualizado',
-        starts_at: '2026-07-01T09:00:00Z',
-        ends_at: '2026-07-01T18:00:00Z',
-        timezone: 'America/Sao_Paulo',
-        capacity: 150,
-        created_by: 'ignorado',
-      },
+      payload: validPutPayload,
     })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
-    expect(body).toHaveProperty('id')
+    expect(body.id).toBe(MOCK_UPDATED_EVENT.id)
+    expect(body.title).toBe('Evento Atualizado')
     expect(body.created_by).toBe(TEST_USER_ID)
   })
 
-  it('rejeita body inválido com 400', async () => {
+  it('EventRepository.update chamado com id correto e created_by do token', async () => {
+    vi.mocked(eventRepository.update).mockResolvedValue(MOCK_UPDATED_EVENT)
+
+    await app.inject({
+      method: 'PUT',
+      url: '/events/evt-update-test',
+      headers: auth(),
+      payload: validPutPayload,
+    })
+
+    expect(vi.mocked(eventRepository.update)).toHaveBeenCalledOnce()
+    expect(vi.mocked(eventRepository.update)).toHaveBeenCalledWith(
+      'evt-update-test',
+      expect.objectContaining({ title: 'Evento Atualizado', created_by: TEST_USER_ID }),
+    )
+  })
+
+  it('evento não encontrado → 404', async () => {
+    vi.mocked(eventRepository.update).mockResolvedValue(null)
+
     const res = await app.inject({
       method: 'PUT',
-      url: '/events/evt_01hw',
+      url: '/events/id-inexistente',
+      headers: auth(),
+      payload: validPutPayload,
+    })
+
+    expect(res.statusCode).toBe(404)
+    expect(res.json().error).toBe('Evento não encontrado')
+  })
+
+  it('body inválido (campos obrigatórios faltando) → 400', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/events/evt-update-test',
       headers: auth(),
       payload: {},
     })
@@ -382,28 +436,85 @@ describe('PUT /events/:id', () => {
 })
 
 describe('PATCH /events/:id', () => {
+  const MOCK_PATCHED_EVENT = {
+    id: 'evt-patch-test',
+    title: 'Novo Título',
+    starts_at: '2026-07-01T09:00:00.000Z',
+    ends_at: '2026-07-01T18:00:00.000Z',
+    timezone: 'America/Sao_Paulo',
+    capacity: 200,
+    created_at: '2026-06-06T12:00:00.000Z',
+    updated_at: '2026-06-07T11:00:00.000Z',
+    deleted_at: null,
+    deleted_by: null,
+    created_by: TEST_USER_ID,
+  }
+
+  it('sem token → 401', async () => {
+    const res = await app.inject({ method: 'PATCH', url: '/events/evt-patch-test', payload: { title: 'Novo' } })
+    expect(res.statusCode).toBe(401)
+  })
+
   it('atualiza evento parcialmente e retorna 200', async () => {
+    vi.mocked(eventRepository.partialUpdate).mockResolvedValue(MOCK_PATCHED_EVENT)
+
     const res = await app.inject({
       method: 'PATCH',
-      url: '/events/evt_01hw',
+      url: '/events/evt-patch-test',
       headers: auth(),
       payload: { title: 'Novo Título' },
     })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
-    expect(body).toHaveProperty('id')
+    expect(body.id).toBe(MOCK_PATCHED_EVENT.id)
+    expect(body.title).toBe('Novo Título')
     expect(body.created_by).toBe(TEST_USER_ID)
   })
 
-  it('aceita body vazio', async () => {
+  it('EventRepository.partialUpdate chamado com id e body corretos', async () => {
+    vi.mocked(eventRepository.partialUpdate).mockResolvedValue(MOCK_PATCHED_EVENT)
+
+    await app.inject({
+      method: 'PATCH',
+      url: '/events/evt-patch-test',
+      headers: auth(),
+      payload: { title: 'Novo Título' },
+    })
+
+    expect(vi.mocked(eventRepository.partialUpdate)).toHaveBeenCalledOnce()
+    expect(vi.mocked(eventRepository.partialUpdate)).toHaveBeenCalledWith(
+      'evt-patch-test',
+      expect.objectContaining({ title: 'Novo Título' }),
+    )
+  })
+
+  it('evento não encontrado → 404', async () => {
+    vi.mocked(eventRepository.partialUpdate).mockResolvedValue(null)
+
     const res = await app.inject({
       method: 'PATCH',
-      url: '/events/evt_01hw',
+      url: '/events/id-inexistente',
+      headers: auth(),
+      payload: { title: 'Qualquer' },
+    })
+
+    expect(res.statusCode).toBe(404)
+    expect(res.json().error).toBe('Evento não encontrado')
+  })
+
+  it('body vazio é válido → 200', async () => {
+    vi.mocked(eventRepository.partialUpdate).mockResolvedValue(MOCK_PATCHED_EVENT)
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/events/evt-patch-test',
       headers: auth(),
       payload: {},
     })
+
     expect(res.statusCode).toBe(200)
+    expect(vi.mocked(eventRepository.partialUpdate)).toHaveBeenCalledOnce()
   })
 })
 
