@@ -7,6 +7,7 @@ interface JwtPayload {
   sub: string
   scopes: string[]
   principal_type: 'user' | 'service'
+  type: 'access' | 'refresh'
   exp: number
   email?: string
 }
@@ -34,6 +35,10 @@ async function authPlugin(fastify: FastifyInstance): Promise<void> {
       const { payload } = await jwtVerify<JwtPayload>(token, getJwks(), {
         algorithms: ['RS256'],
       })
+
+      if (payload.type !== 'access') {
+        return reply.status(401).send({ error: 'Invalid or expired token' })
+      }
 
       request.user = {
         id: payload.sub,
