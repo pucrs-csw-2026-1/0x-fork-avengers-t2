@@ -5,6 +5,7 @@ import type { Activity } from '../schemas/activity.schema.js'
 import type { EventRole } from '../schemas/event-role.schema.js'
 import type { EventsMetrics } from '../schemas/metrics.schema.js'
 import { eventRepository } from '../repositories/event.repository.js'
+import { requireScope } from '../plugins/auth.plugin.js'
 
 const MOCK_EVENT: Omit<Event, 'created_by'> = {
   id: 'evt_01hw',
@@ -53,6 +54,7 @@ const ParamsIdSchema = Type.Object({ id: Type.String() })
 
 export async function eventsRoutes(fastify: FastifyInstance) {
   fastify.post('/events', {
+    preHandler: requireScope('manager'),
     schema: {
       tags: ['Events'],
       summary: 'Cria um evento',
@@ -121,6 +123,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
   })
 
   fastify.put('/events/:id', {
+    preHandler: requireScope('manager'),
     schema: {
       tags: ['Events'],
       summary: 'Atualiza evento completo',
@@ -143,6 +146,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
   })
 
   fastify.patch('/events/:id', {
+    preHandler: requireScope('manager'),
     schema: {
       tags: ['Events'],
       summary: 'Atualiza evento parcialmente',
@@ -165,6 +169,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
   })
 
   fastify.delete('/events/:id', {
+    preHandler: requireScope('manager'),
     schema: {
       tags: ['Events'],
       summary: 'Soft delete — preenche deleted_at',
@@ -206,6 +211,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
   })
 
   fastify.post('/events/:id/roles', {
+    preHandler: requireScope('manager'),
     schema: {
       tags: ['Roles'],
       summary: 'Adiciona role ao evento',
@@ -221,6 +227,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
   })
 
   fastify.delete('/events/:id/roles/:role', {
+    preHandler: requireScope('manager'),
     schema: {
       tags: ['Roles'],
       summary: 'Remove role do evento',

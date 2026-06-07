@@ -47,3 +47,12 @@ async function authPlugin(fastify: FastifyInstance): Promise<void> {
 }
 
 export default fp(authPlugin, { name: 'auth' })
+
+export function requireScope(...required: string[]) {
+  return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    const missing = required.some((s) => !request.user.scopes.includes(s))
+    if (missing) {
+      return reply.status(403).send({ error: 'Forbidden' })
+    }
+  }
+}

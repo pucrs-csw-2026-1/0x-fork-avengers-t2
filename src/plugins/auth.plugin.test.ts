@@ -3,6 +3,7 @@ import Fastify from 'fastify'
 import { generateKeyPair, exportJWK, SignJWT } from 'jose'
 import fp from 'fastify-plugin'
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import { requireScope } from './auth.plugin.js'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -249,6 +250,80 @@ describe('auth plugin', () => {
 
     expect(res.statusCode).toBe(200)
     expect(res.json().user.principalType).toBe('service')
+
+    await app.close()
+  })
+})
+
+// ── requireScope ──────────────────────────────────────────────────────────────
+
+function buildScopeApp(userScopes: string[]): FastifyInstance {
+  const app = Fastify({ logger: false })
+
+  app.decorateRequest('user', null)
+  app.addHook('onRequest', async (req: FastifyRequest) => {
+    req.user = { id: 'usr_test', scopes: userScopes, principalType: 'user' }
+  })
+
+  app.post('/protected', { preHandler: requireScope('manager') }, async (_req, reply) => {
+    reply.status(200).send({ ok: true })
+  })
+
+  app.post('/multi', { preHandler: requireScope('manager', 'admin') }, async (_req, reply) => {
+    reply.status(200).send({ ok: true })
+  })
+
+  return app
+}
+
+describe('requireScope', () => {
+  it('scope presente → 200', async () => {
+    const app = buildScopeApp(['participant', 'manager'])
+    await app.ready()
+
+    const res = await app.inject({ method: 'POST', url: '/protected' })
+    expect(res.statusCode).toBe(200)
+
+    await app.close()
+  })
+
+  it('scope ausente → 403', async () => {
+    const app = buildScopeApp(['participant'])
+    await app.ready()
+
+    const res = await app.inject({ method: 'POST', url: '/protected' })
+    expect(res.statusCode).toBe(403)
+    expect(res.json()).toEqual({ error: 'Forbidden' })
+
+    await app.close()
+  })
+
+  it('scopes vazios → 403', async () => {
+    const app = buildScopeApp([])
+    await app.ready()
+
+    const res = await app.inject({ method: 'POST', url: '/protected' })
+    expect(res.statusCode).toBe(403)
+
+    await app.close()
+  })
+
+  it('múltiplos scopes exigidos — todos presentes → 200', async () => {
+    const app = buildScopeApp(['participant', 'manager', 'admin'])
+    await app.ready()
+
+    const res = await app.inject({ method: 'POST', url: '/multi' })
+    expect(res.statusCode).toBe(200)
+
+    await app.close()
+  })
+
+  it('múltiplos scopes exigidos — um faltando → 403', async () => {
+    const app = buildScopeApp(['participant', 'manager'])
+    await app.ready()
+
+    const res = await app.inject({ method: 'POST', url: '/multi' })
+    expect(res.statusCode).toBe(403)
 
     await app.close()
   })
