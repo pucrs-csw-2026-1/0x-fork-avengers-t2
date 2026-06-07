@@ -175,14 +175,19 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       tags: ['Events'],
       summary: 'Soft delete — preenche deleted_at',
       params: ParamsIdSchema,
-      response: { 200: { $ref: 'Event#' } },
+      response: {
+        200: { $ref: 'Event#' },
+        404: Type.Object({ error: Type.String() }),
+      },
     },
-    handler: async (req) => ({
-      ...MOCK_EVENT,
-      created_by: req.user.id,
-      deleted_at: new Date().toISOString(),
-      deleted_by: req.user.id,
-    }),
+    handler: async (req, reply) => {
+      const { id } = req.params as { id: string }
+      const event = await eventRepository.softDelete(id, req.user.id)
+      if (!event) {
+        return reply.status(404).send({ error: 'Evento não encontrado' })
+      }
+      return reply.send(event)
+    },
   })
 
   fastify.get('/events/:id/activitys', {
