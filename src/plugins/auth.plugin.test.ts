@@ -66,7 +66,12 @@ function buildTestApp(jwksPayload: Record<string, unknown>): FastifyInstance {
           sub: string
           scopes: string[]
           principal_type: 'user' | 'service'
+          type: 'access' | 'refresh'
         }>(token, localJwks, { algorithms: ['RS256'] })
+
+        if (payload.type !== 'access') {
+          return reply.status(401).send({ error: 'Invalid or expired token' })
+        }
 
         request.user = {
           id: payload.sub,
@@ -95,6 +100,7 @@ describe('auth plugin', () => {
       sub: 'usr_abc123',
       scopes: ['participant', 'manager'],
       principal_type: 'user',
+      type: 'access',
     })
 
     const res = await app.inject({
@@ -207,6 +213,27 @@ describe('auth plugin', () => {
     await app.close()
   })
 
+  it('refresh token (type=refresh) → 401', async () => {
+    const app = buildTestApp(publicJwk)
+    await app.ready()
+
+    const refreshToken = await signToken({
+      sub: 'usr_abc',
+      scopes: ['participant'],
+      principal_type: 'user',
+      type: 'refresh',
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/me',
+      headers: { authorization: `Bearer ${refreshToken}` },
+    })
+
+    expect(res.statusCode).toBe(401)
+    await app.close()
+  })
+
   it('admin com scopes cumulativos → todos os scopes presentes', async () => {
     const app = buildTestApp(publicJwk)
     await app.ready()
@@ -215,6 +242,7 @@ describe('auth plugin', () => {
       sub: 'usr_admin',
       scopes: ['participant', 'manager', 'admin'],
       principal_type: 'user',
+      type: 'access',
     })
 
     const res = await app.inject({
@@ -240,6 +268,7 @@ describe('auth plugin', () => {
       sub: 'svc_gateway',
       scopes: ['participant'],
       principal_type: 'service',
+      type: 'access',
     })
 
     const res = await app.inject({
