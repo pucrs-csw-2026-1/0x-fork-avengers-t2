@@ -736,6 +736,49 @@ describe('PATCH /events/:id/activitys/:activityId', () => {
   })
 })
 
+describe('PUT /events/:id/activitys/:activityId/thumbnail', () => {
+  it('atualiza thumbnail_url e retorna 200', async () => {
+    const withThumb = { ...MOCK_ACTIVITY, thumbnail_url: 'https://cdn.example.com/img.jpg' }
+    vi.mocked(activityRepository.partialUpdate).mockResolvedValue(withThumb)
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/events/evt_01hw/activitys/act_001/thumbnail',
+      headers: auth(),
+      payload: { thumbnail_url: 'https://cdn.example.com/img.jpg' },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().thumbnail_url).toBe('https://cdn.example.com/img.jpg')
+    expect(vi.mocked(activityRepository.partialUpdate)).toHaveBeenCalledWith(
+      'act_001',
+      { thumbnail_url: 'https://cdn.example.com/img.jpg' },
+    )
+  })
+
+  it('atividade não encontrada → 404', async () => {
+    vi.mocked(activityRepository.partialUpdate).mockResolvedValue(null)
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/events/evt_01hw/activitys/naoexiste/thumbnail',
+      headers: auth(),
+      payload: { thumbnail_url: 'https://cdn.example.com/img.jpg' },
+    })
+    expect(res.statusCode).toBe(404)
+  })
+
+  it('URL inválida → 400', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/events/evt_01hw/activitys/act_001/thumbnail',
+      headers: auth(),
+      payload: { thumbnail_url: 'not-a-url' },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+})
+
 describe('DELETE /events/:id/activitys/:activityId', () => {
   it('soft delete de atividade e retorna 200', async () => {
     const deleted = { ...MOCK_ACTIVITY, deleted_at: '2026-06-07T00:00:00.000Z', deleted_by: TEST_USER_ID }

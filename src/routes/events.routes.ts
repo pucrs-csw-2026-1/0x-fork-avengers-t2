@@ -234,6 +234,27 @@ export async function eventsRoutes(fastify: FastifyInstance) {
     },
   })
 
+  fastify.put('/events/:id/activitys/:activityId/thumbnail', {
+    preHandler: requireScope('manager'),
+    schema: {
+      tags: ['Activitys'],
+      summary: 'Define ou atualiza a thumbnail da atividade',
+      params: ParamsActivitySchema,
+      body: Type.Object({ thumbnail_url: Type.String({ format: 'uri' }) }),
+      response: {
+        200: { $ref: 'Activity#' },
+        404: Type.Object({ error: Type.String() }),
+      },
+    },
+    handler: async (req, reply) => {
+      const { activityId } = req.params as { id: string; activityId: string }
+      const { thumbnail_url } = req.body as { thumbnail_url: string }
+      const activity = await activityRepository.partialUpdate(activityId, { thumbnail_url })
+      if (!activity) return reply.status(404).send({ error: 'Atividade não encontrada' })
+      return reply.send(activity)
+    },
+  })
+
   fastify.delete('/events/:id/activitys/:activityId', {
     preHandler: requireScope('manager'),
     schema: {
