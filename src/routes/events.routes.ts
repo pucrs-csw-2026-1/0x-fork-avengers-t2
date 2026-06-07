@@ -105,9 +105,19 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       tags: ['Events'],
       summary: 'Busca evento por ID',
       params: ParamsIdSchema,
-      response: { 200: { $ref: 'Event#' } },
+      response: {
+        200: { $ref: 'Event#' },
+        404: Type.Object({ error: Type.String() }),
+      },
     },
-    handler: async (req) => ({ ...MOCK_EVENT, created_by: req.user.id }),
+    handler: async (req, reply) => {
+      const { id } = req.params as { id: string }
+      const event = await eventRepository.findById(id)
+      if (!event) {
+        return reply.status(404).send({ error: 'Evento não encontrado' })
+      }
+      return reply.send(event)
+    },
   })
 
   fastify.put('/events/:id', {

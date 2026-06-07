@@ -97,5 +97,137 @@
     },
     "role": "user",
     "content": "Sim, matenha os padrões de commit e abra o PR"
+  },
+  {
+    "timestamp": "2026-06-07T00:45:30.109Z",
+    "source": "claude",
+    "git_branch": "issue-12-backend-get-event-by-id",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Agora vou ler o estado atual dos arquivos antes de implementar:"
+  },
+  {
+    "timestamp": "2026-06-07T00:45:53.554Z",
+    "source": "claude",
+    "git_branch": "issue-12-backend-get-event-by-id",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Tenho tudo que preciso. Vou implementar o handler e os testes:"
+  },
+  {
+    "timestamp": "2026-06-07T00:46:18.662Z",
+    "source": "claude",
+    "git_branch": "issue-12-backend-get-event-by-id",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Agora substituo o bloco de testes `GET /events/:id` com cobertura completa:"
+  },
+  {
+    "timestamp": "2026-06-07T00:47:01.066Z",
+    "source": "claude",
+    "git_branch": "issue-12-backend-get-event-by-id",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "90/90 testes passando, mas há um erro TypeScript — o schema da rota precisa declarar a resposta 404. Vou corrigir:"
+  },
+  {
+    "timestamp": "2026-06-07T00:47:44.149Z",
+    "source": "claude",
+    "git_branch": "issue-12-backend-get-event-by-id",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "90/90 testes, TypeScript e lint limpos. Pronto para testar manualmente.\n\n---\n\n**Terminal 1 — projeto do 0x:**\n```powershell\ndocker compose up -d\n```\n\n**Terminal 2 — este projeto:**\n```powershell\ndocker start events_postgres\nnpm run dev\n```\n\n**Terminal 3 — testes:**\n\n```powershell\n# Token\n$response = Invoke-RestMethod -Uri \"http://localhost:8080/auth/login\" -Method POST -ContentType \"application/x-www-form-urlencoded\" -Body \"username=admin@local.dev&password=Admin@123\"\n$token = $response.access_token\n```\n\n```powershell\n# Buscar evento existente (use um ID real do banco)\nInvoke-RestMethod -Uri \"http://localhost:3000/events/9a3fb1d6-d802-408c-b7ea-d2f007bdea77\" -Headers @{ Authorization = \"Bearer $token\" }\n```\n\n```powershell\n# Buscar ID inexistente → deve retornar 404\ntry {\n  Invoke-RestMethod -Uri \"http://localhost:3000/events/id-que-nao-existe\" -Headers @{ Authorization = \"Bearer $token\" }\n} catch {\n  $_.Exception.Response.StatusCode.value__\n}\n```\n\n**O que verificar:**\n- ID existente → status 200, evento completo com todos os campos\n- ID inexistente → status 404 com `{ error: 'Evento não encontrado' }`\n- Sem token → 401"
+  },
+  {
+    "timestamp": "2026-06-07T00:49:41.690Z",
+    "source": "claude",
+    "git_branch": "issue-12-backend-get-event-by-id",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "user",
+    "content": "PS C:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2> $response = Invoke-RestMethod -Uri \"http://localhost:8080/auth/login\" -Method POST -ContentType \"application/x-www-form-urlencoded\" -Body \"username=admin@local.dev&password=Admin@123\"\n>> \nPS C:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2> $token = $response.access_token\n>> \n>> \nPS C:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2> Invoke-RestMethod -Uri \"http://localhost:3000/events/9a3fb1d6-d802-408c-b7ea-d2f007bdea77\" -Headers @{ Authorization = \"Bearer $token\" }\n>> \n>> \n\n\nid         : 9a3fb1d6-d802-408c-b7ea-d2f007bdea77\ntitle      : Evento Teste\nstarts_at  : 2026-07-01T09:00:00.000Z\nends_at    : 2026-07-01T18:00:00.000Z\ntimezone   : America/Sao_Paulo\ncapacity   : 100\ncreated_at : 2026-06-06T22:20:00.462Z\nupdated_at : 2026-06-06T22:20:00.462Z\ndeleted_at : \ndeleted_by : \ncreated_by : 83ded1ee-0dd7-4de0-8f7b-699c8bf83a0d\n\n\n\nPS C:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2> try {\n>>   Invoke-RestMethod -Uri \"http://localhost:3000/events/id-que-nao-existe\" -Headers @{ Authorization = \"Bearer $token\" }\n>> } catch {\n>>   $_.Exception.Response.StatusCode.value__\n>> }\n404\nPS C:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2>"
+  },
+  {
+    "timestamp": "2026-06-07T00:49:44.853Z",
+    "source": "claude",
+    "git_branch": "issue-12-backend-get-event-by-id",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Funcionou perfeitamente. Pode commitar e abrir o PR?"
+  },
+  {
+    "timestamp": "2026-06-07T00:49:53.029Z",
+    "source": "claude",
+    "git_branch": "issue-12-backend-get-event-by-id",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "user",
+    "content": "Mas e como eu faço sem token?"
+  },
+  {
+    "timestamp": "2026-06-07T00:49:56.662Z",
+    "source": "claude",
+    "git_branch": "issue-12-backend-get-event-by-id",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "```powershell\ntry {\n  Invoke-RestMethod -Uri \"http://localhost:3000/events/9a3fb1d6-d802-408c-b7ea-d2f007bdea77\"\n} catch {\n  $_.Exception.Response.StatusCode.value__\n}\n```\n\nDeve retornar `401`."
+  },
+  {
+    "timestamp": "2026-06-07T00:50:29.548Z",
+    "source": "claude",
+    "git_branch": "issue-12-backend-get-event-by-id",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "user",
+    "content": "PS C:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2> try {\n>>   Invoke-RestMethod -Uri \"http://localhost:3000/events/9a3fb1d6-d802-408c-b7ea-d2f007bdea77\"\n>> } catch {\n>>   $_.Exception.Response.StatusCode.value__\n>> }\n401\nPS C:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2> \n\nDeu certo!!"
+  },
+  {
+    "timestamp": "2026-06-07T00:50:33.123Z",
+    "source": "claude",
+    "git_branch": "issue-12-backend-get-event-by-id",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Pode commitar e abrir o PR?"
+  },
+  {
+    "timestamp": "2026-06-07T00:51:06.377Z",
+    "source": "claude",
+    "git_branch": "issue-12-backend-get-event-by-id",
+    "git_user_name": "seibt05",
+    "call_context": {
+      "cwd": "c:\\Users\\mathe\\OneDrive\\Área de Trabalho\\PUCRS\\Construção de Software\\T2_CS\\avengers-t2"
+    },
+    "role": "user",
+    "content": "Sim, pode commitar e abrir o PR"
   }
 ]
