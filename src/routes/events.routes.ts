@@ -6,8 +6,10 @@ import type { EventRole } from '../schemas/event-role.schema.js'
 import type { EventsMetrics } from '../schemas/metrics.schema.js'
 import { eventRepository } from '../repositories/event.repository.js'
 import { activityRepository } from '../repositories/activity.repository.js'
+import { metricsRepository } from '../repositories/metrics.repository.js'
 import { requireScope } from '../plugins/auth.plugin.js'
 import { roleRepository } from '../repositories/role.repository.js'
+import { registrationClient } from '../clients/registration.client.js'
 
 const ParamsIdSchema = Type.Object({ id: Type.String() })
 const ParamsActivitySchema = Type.Object({ id: Type.String(), activityId: Type.String() })
@@ -50,16 +52,27 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       summary: 'Métricas agregadas de todos os eventos',
       response: { 200: { $ref: 'EventsMetrics#' } },
     },
-    handler: async (): Promise<EventsMetrics> => ({
-      total_events: 1,
-      total_activitys: 1,
-      total_capacity: 200,
-      total_enrolled: 87,
-      total_available_spots: 113,
-      average_occupancy_percentage: 43.5,
-      events_by_category: { tecnologia: 1 },
-      events_by_status: { upcoming: 1, ongoing: 0, past: 0 },
-    }),
+    handler: async (): Promise<EventsMetrics> => {
+      const stats = await metricsRepository.getEventStats()
+      const totalEnrolled = await registrationClient.getTotalEnrolled(stats.eventIds)
+      const totalCapacity = stats.total_capacity
+      const totalAvailableSpots = Math.max(0, totalCapacity - totalEnrolled)
+      const averageOccupancy =
+        totalCapacity > 0
+          ? Math.min(100, Math.round((totalEnrolled / totalCapacity) * 10000) / 100)
+          : 0
+
+      return {
+        total_events: stats.total_events,
+        total_activitys: stats.total_activitys,
+        total_capacity: totalCapacity,
+        total_enrolled: totalEnrolled,
+        total_available_spots: totalAvailableSpots,
+        average_occupancy_percentage: averageOccupancy,
+        events_by_category: stats.events_by_category,
+        events_by_status: stats.events_by_status,
+      }
+    },
   })
 
   fastify.get('/events/:id', {
