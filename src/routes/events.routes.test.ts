@@ -14,7 +14,16 @@ vi.mock('../repositories/event.repository.js', () => ({
   },
 }))
 
+vi.mock('../repositories/role.repository.js', () => ({
+  roleRepository: {
+    findByEventId: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+  },
+}))
+
 import { eventRepository } from '../repositories/event.repository.js'
+import { roleRepository } from '../repositories/role.repository.js'
 
 let app: FastifyInstance
 let token: string
@@ -546,6 +555,11 @@ describe('GET /events/:id/activitys', () => {
 
 describe('GET /events/:id/roles', () => {
   it('lista roles do evento com 200', async () => {
+    vi.mocked(roleRepository.findByEventId).mockResolvedValue([
+      { event_id: 'evt_01hw', role: 'student' },
+      { event_id: 'evt_01hw', role: 'professor' },
+    ])
+
     const res = await app.inject({ method: 'GET', url: '/events/evt_01hw/roles', headers: auth() })
 
     expect(res.statusCode).toBe(200)
@@ -557,6 +571,10 @@ describe('GET /events/:id/roles', () => {
   })
 
   it('retorna event_id igual ao parâmetro da URL', async () => {
+    vi.mocked(roleRepository.findByEventId).mockResolvedValue([
+      { event_id: 'evt_01hw', role: 'student' },
+    ])
+
     const res = await app.inject({ method: 'GET', url: '/events/evt_01hw/roles', headers: auth() })
     const body = res.json()
     expect(body[0].event_id).toBe('evt_01hw')
@@ -565,6 +583,8 @@ describe('GET /events/:id/roles', () => {
 
 describe('POST /events/:id/roles', () => {
   it('adiciona role ao evento e retorna 201', async () => {
+    vi.mocked(roleRepository.create).mockResolvedValue({ event_id: 'evt_01hw', role: 'staff' })
+
     const res = await app.inject({
       method: 'POST',
       url: '/events/evt_01hw/roles',
@@ -591,6 +611,8 @@ describe('POST /events/:id/roles', () => {
 
 describe('DELETE /events/:id/roles/:role', () => {
   it('remove role do evento e retorna 204', async () => {
+    vi.mocked(roleRepository.delete).mockResolvedValue({ event_id: 'evt_01hw', role: 'staff' })
+
     const res = await app.inject({
       method: 'DELETE',
       url: '/events/evt_01hw/roles/staff',
@@ -599,5 +621,17 @@ describe('DELETE /events/:id/roles/:role', () => {
 
     expect(res.statusCode).toBe(204)
     expect(res.body).toBe('')
+  })
+
+  it('role inexistente → 404', async () => {
+    vi.mocked(roleRepository.delete).mockResolvedValue(null)
+
+    const res = await app.inject({
+      method: 'DELETE',
+      url: '/events/evt_01hw/roles/naoexiste',
+      headers: auth(),
+    })
+
+    expect(res.statusCode).toBe(404)
   })
 })
