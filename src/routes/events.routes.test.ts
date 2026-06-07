@@ -528,14 +528,38 @@ describe('PATCH /events/:id', () => {
 })
 
 describe('DELETE /events/:id', () => {
+  const MOCK_DELETED_EVENT = {
+    id: 'evt_01hw',
+    title: 'Evento',
+    starts_at: '2026-07-01T09:00:00.000Z',
+    ends_at: '2026-07-01T18:00:00.000Z',
+    timezone: 'America/Sao_Paulo',
+    capacity: 100,
+    created_at: '2026-06-06T12:00:00.000Z',
+    updated_at: '2026-06-07T00:00:00.000Z',
+    deleted_at: '2026-06-07T00:00:00.000Z',
+    deleted_by: TEST_USER_ID,
+    created_by: TEST_USER_ID,
+  }
+
   it('faz soft delete e retorna 200 com deleted_at e deleted_by do token', async () => {
+    vi.mocked(eventRepository.softDelete).mockResolvedValue(MOCK_DELETED_EVENT)
+
     const res = await app.inject({ method: 'DELETE', url: '/events/evt_01hw', headers: auth() })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
-    expect(body).toHaveProperty('deleted_at')
     expect(body.deleted_at).not.toBeNull()
     expect(body.deleted_by).toBe(TEST_USER_ID)
+    expect(vi.mocked(eventRepository.softDelete)).toHaveBeenCalledWith('evt_01hw', TEST_USER_ID)
+  })
+
+  it('evento não encontrado ou já deletado → 404', async () => {
+    vi.mocked(eventRepository.softDelete).mockResolvedValue(null)
+
+    const res = await app.inject({ method: 'DELETE', url: '/events/naoexiste', headers: auth() })
+
+    expect(res.statusCode).toBe(404)
   })
 })
 
