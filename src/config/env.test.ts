@@ -44,7 +44,7 @@ describe('env config', () => {
 
   it('env object has only the expected keys', () => {
     const keys = Object.keys(env)
-    const expected = ['PORT', 'HOST', 'NODE_ENV', 'DATABASE_URL', 'AUTH_SERVICE_URL', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB']
+    const expected = ['PORT', 'HOST', 'NODE_ENV', 'DATABASE_URL', 'AUTH_SERVICE_URL', 'REGISTRATION_SERVICE_URL', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB']
     expected.forEach(key => expect(keys).toContain(key))
   })
 })

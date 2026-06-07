@@ -33,9 +33,24 @@ vi.mock('../repositories/activity.repository.js', () => ({
   },
 }))
 
+vi.mock('../repositories/metrics.repository.js', () => ({
+  metricsRepository: {
+    getEventStats: vi.fn(),
+  },
+}))
+
+vi.mock('../clients/registration.client.js', () => ({
+  registrationClient: {
+    getRegistrationCountByEvent: vi.fn(),
+    getTotalEnrolled: vi.fn(),
+  },
+}))
+
 import { eventRepository } from '../repositories/event.repository.js'
 import { roleRepository } from '../repositories/role.repository.js'
 import { activityRepository } from '../repositories/activity.repository.js'
+import { metricsRepository } from '../repositories/metrics.repository.js'
+import { registrationClient } from '../clients/registration.client.js'
 
 let app: FastifyInstance
 let token: string
@@ -248,22 +263,44 @@ describe('GET /events', () => {
 })
 
 describe('GET /events/metrics', () => {
-  it('retorna métricas agregadas com 200', async () => {
+  const MOCK_STATS = {
+    total_events: 3,
+    total_activitys: 7,
+    total_capacity: 500,
+    events_by_category: { tecnologia: 2, educacao: 1 },
+    events_by_status: { upcoming: 2, ongoing: 1, past: 0 },
+    eventIds: ['evt_a', 'evt_b', 'evt_c'],
+  }
+
+  it('retorna métricas agregadas com 200 e calcula campos derivados', async () => {
+    vi.mocked(metricsRepository.getEventStats).mockResolvedValue(MOCK_STATS)
+    vi.mocked(registrationClient.getTotalEnrolled).mockResolvedValue(100)
+
     const res = await app.inject({ method: 'GET', url: '/events/metrics', headers: auth() })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
-    expect(body).toHaveProperty('total_events')
-    expect(body).toHaveProperty('total_activitys')
-    expect(body).toHaveProperty('total_capacity')
-    expect(body).toHaveProperty('total_enrolled')
-    expect(body).toHaveProperty('total_available_spots')
-    expect(body).toHaveProperty('average_occupancy_percentage')
-    expect(body).toHaveProperty('events_by_category')
-    expect(body).toHaveProperty('events_by_status')
-    expect(body.events_by_status).toHaveProperty('upcoming')
-    expect(body.events_by_status).toHaveProperty('ongoing')
-    expect(body.events_by_status).toHaveProperty('past')
+    expect(body.total_events).toBe(3)
+    expect(body.total_activitys).toBe(7)
+    expect(body.total_capacity).toBe(500)
+    expect(body.total_enrolled).toBe(100)
+    expect(body.total_available_spots).toBe(400)
+    expect(body.average_occupancy_percentage).toBe(20)
+    expect(body.events_by_category).toEqual({ tecnologia: 2, educacao: 1 })
+    expect(body.events_by_status).toEqual({ upcoming: 2, ongoing: 1, past: 0 })
+  })
+
+  it('total_enrolled = 0 quando Registration Service indisponível', async () => {
+    vi.mocked(metricsRepository.getEventStats).mockResolvedValue(MOCK_STATS)
+    vi.mocked(registrationClient.getTotalEnrolled).mockResolvedValue(0)
+
+    const res = await app.inject({ method: 'GET', url: '/events/metrics', headers: auth() })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.total_enrolled).toBe(0)
+    expect(body.total_available_spots).toBe(500)
+    expect(body.average_occupancy_percentage).toBe(0)
   })
 })
 
