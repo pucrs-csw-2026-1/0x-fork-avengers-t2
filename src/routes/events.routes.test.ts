@@ -247,14 +247,104 @@ describe('GET /events/metrics', () => {
 })
 
 describe('GET /events/:id', () => {
-  it('retorna evento por ID com 200', async () => {
-    const res = await app.inject({ method: 'GET', url: '/events/evt_01hw', headers: auth() })
+  const MOCK_EVENT = {
+    id: 'evt-abc-123',
+    title: 'Evento Por ID',
+    starts_at: '2026-07-01T09:00:00.000Z',
+    ends_at: '2026-07-01T18:00:00.000Z',
+    timezone: 'America/Sao_Paulo',
+    capacity: 100,
+    created_at: '2026-06-06T12:00:00.000Z',
+    updated_at: '2026-06-06T12:00:00.000Z',
+    deleted_at: null,
+    deleted_by: null,
+    created_by: TEST_USER_ID,
+  }
+
+  it('sem token → 401', async () => {
+    const res = await app.inject({ method: 'GET', url: '/events/evt-abc-123' })
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('token inválido → 401', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/events/evt-abc-123',
+      headers: { authorization: 'Bearer token.invalido.aqui' },
+    })
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('token expirado → 401', async () => {
+    const expiredToken = 'eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c3IiLCJleHAiOjF9.invalido'
+    const res = await app.inject({
+      method: 'GET',
+      url: '/events/evt-abc-123',
+      headers: { authorization: `Bearer ${expiredToken}` },
+    })
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('evento encontrado → 200 com todos os campos do schema', async () => {
+    vi.mocked(eventRepository.findById).mockResolvedValue(MOCK_EVENT)
+
+    const res = await app.inject({ method: 'GET', url: '/events/evt-abc-123', headers: auth() })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
-    expect(body).toHaveProperty('id')
-    expect(body).toHaveProperty('title')
+    expect(body.id).toBe('evt-abc-123')
+    expect(body.title).toBe('Evento Por ID')
+    expect(body.starts_at).toBe(MOCK_EVENT.starts_at)
+    expect(body.ends_at).toBe(MOCK_EVENT.ends_at)
+    expect(body.timezone).toBe('America/Sao_Paulo')
+    expect(body.capacity).toBe(100)
     expect(body.created_by).toBe(TEST_USER_ID)
+    expect(body.created_at).toBe(MOCK_EVENT.created_at)
+    expect(body.updated_at).toBe(MOCK_EVENT.updated_at)
+    expect(body.deleted_at).toBeNull()
+    expect(body.deleted_by).toBeNull()
+  })
+
+  it('findById chamado exatamente uma vez com o id correto', async () => {
+    vi.mocked(eventRepository.findById).mockResolvedValue(MOCK_EVENT)
+
+    await app.inject({ method: 'GET', url: '/events/evt-abc-123', headers: auth() })
+
+    expect(vi.mocked(eventRepository.findById)).toHaveBeenCalledOnce()
+    expect(vi.mocked(eventRepository.findById)).toHaveBeenCalledWith('evt-abc-123')
+  })
+
+  it('id inexistente → 404', async () => {
+    vi.mocked(eventRepository.findById).mockResolvedValue(null)
+
+    const res = await app.inject({ method: 'GET', url: '/events/id-que-nao-existe', headers: auth() })
+
+    expect(res.statusCode).toBe(404)
+  })
+
+  it('findById retornando null → 404', async () => {
+    vi.mocked(eventRepository.findById).mockResolvedValue(null)
+
+    const res = await app.inject({ method: 'GET', url: '/events/qualquer-id', headers: auth() })
+
+    expect(res.statusCode).toBe(404)
+    expect(res.json()).toHaveProperty('error')
+  })
+
+  it('evento soft-deletado → 404 (repositório retorna null para deleted_at preenchido)', async () => {
+    vi.mocked(eventRepository.findById).mockResolvedValue(null)
+
+    const res = await app.inject({ method: 'GET', url: '/events/evt-deletado', headers: auth() })
+
+    expect(res.statusCode).toBe(404)
+  })
+
+  it('id com caractere especial → 404', async () => {
+    vi.mocked(eventRepository.findById).mockResolvedValue(null)
+
+    const res = await app.inject({ method: 'GET', url: '/events/id%20invalido', headers: auth() })
+
+    expect(res.statusCode).toBe(404)
   })
 })
 
