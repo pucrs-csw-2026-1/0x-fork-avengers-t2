@@ -1,9 +1,10 @@
 import { Type } from '@sinclair/typebox'
 import type { FastifyInstance } from 'fastify'
-import type { Event } from '../schemas/event.schema.js'
+import type { Event, CreateEventBody } from '../schemas/event.schema.js'
 import type { Activity } from '../schemas/activity.schema.js'
 import type { EventRole } from '../schemas/event-role.schema.js'
 import type { EventsMetrics } from '../schemas/metrics.schema.js'
+import { eventRepository } from '../repositories/event.repository.js'
 
 const MOCK_EVENT: Omit<Event, 'created_by'> = {
   id: 'evt_01hw',
@@ -55,11 +56,13 @@ export async function eventsRoutes(fastify: FastifyInstance) {
     schema: {
       tags: ['Events'],
       summary: 'Cria um evento',
-      body: { $ref: 'CreateEvent#' },
+      body: { $ref: 'CreateEventBody#' },
       response: { 201: { $ref: 'Event#' } },
     },
     handler: async (req, reply) => {
-      reply.status(201).send({ ...MOCK_EVENT, id: 'evt_new_' + Date.now(), created_by: req.user.id })
+      const body = req.body as CreateEventBody
+      const event = await eventRepository.create({ ...body, created_by: req.user.id })
+      return reply.status(201).send(event)
     },
   })
 
