@@ -6,6 +6,7 @@ import type { EventRole } from '../schemas/event-role.schema.js'
 import type { EventsMetrics } from '../schemas/metrics.schema.js'
 import { eventRepository } from '../repositories/event.repository.js'
 import { requireScope } from '../plugins/auth.plugin.js'
+import { roleRepository } from '../repositories/role.repository.js'
 
 const MOCK_EVENT: Omit<Event, 'created_by'> = {
   id: 'evt_01hw',
@@ -203,10 +204,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
     },
     handler: async (req): Promise<EventRole[]> => {
       const { id } = req.params as { id: string }
-      return [
-        { event_id: id, role: 'student' },
-        { event_id: id, role: 'professor' },
-      ]
+      return roleRepository.findByEventId(id)
     },
   })
 
@@ -222,7 +220,8 @@ export async function eventsRoutes(fastify: FastifyInstance) {
     handler: async (req, reply): Promise<void> => {
       const { id } = req.params as { id: string }
       const { role } = req.body as { role: string }
-      reply.status(201).send({ event_id: id, role })
+      const created = await roleRepository.create(id, role)
+      reply.status(201).send(created)
     },
   })
 
@@ -234,7 +233,12 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       params: Type.Object({ id: Type.String(), role: Type.String() }),
       response: { 204: Type.Null() },
     },
-    handler: async (_req, reply): Promise<void> => {
+    handler: async (req, reply): Promise<void> => {
+      const { id, role } = req.params as { id: string; role: string }
+      const deleted = await roleRepository.delete(id, role)
+      if (!deleted) {
+        return reply.status(404).send({ error: 'Role não encontrada' })
+      }
       reply.status(204).send()
     },
   })
