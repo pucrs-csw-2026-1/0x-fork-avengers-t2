@@ -76,7 +76,10 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       }),
       response: { 200: { $ref: 'EventListResponse#' } },
     },
-    handler: async (req) => ({ data: [{ ...MOCK_EVENT, created_by: req.user.id }], total: 1, page: 1, limit: 20 }),
+    handler: async (req) => {
+      const { page, limit } = req.query as { page: number; limit: number }
+      return eventRepository.findAll({ page, limit })
+    },
   })
 
   fastify.get('/events/metrics', {
