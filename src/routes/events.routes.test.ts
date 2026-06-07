@@ -22,8 +22,20 @@ vi.mock('../repositories/role.repository.js', () => ({
   },
 }))
 
+vi.mock('../repositories/activity.repository.js', () => ({
+  activityRepository: {
+    findByEventId: vi.fn(),
+    findById: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    partialUpdate: vi.fn(),
+    softDelete: vi.fn(),
+  },
+}))
+
 import { eventRepository } from '../repositories/event.repository.js'
 import { roleRepository } from '../repositories/role.repository.js'
+import { activityRepository } from '../repositories/activity.repository.js'
 
 let app: FastifyInstance
 let token: string
@@ -563,8 +575,34 @@ describe('DELETE /events/:id', () => {
   })
 })
 
+const MOCK_ACTIVITY = {
+  id_activity: 'act_001',
+  title_activity: 'Palestra de IA',
+  type: 'palestra',
+  starts_at: '2026-07-01T09:00:00.000Z',
+  ends_at: '2026-07-01T10:00:00.000Z',
+  timezone: 'America/Sao_Paulo',
+  workload_minutes: 60,
+  created_at: '2026-06-06T12:00:00.000Z',
+  updated_at: '2026-06-06T12:00:00.000Z',
+  deleted_at: null,
+  deleted_by: null,
+  created_by: TEST_USER_ID,
+}
+
+const validActivityPayload = {
+  title_activity: 'Palestra de IA',
+  type: 'palestra',
+  starts_at: '2026-07-01T09:00:00Z',
+  ends_at: '2026-07-01T10:00:00Z',
+  timezone: 'America/Sao_Paulo',
+  workload_minutes: 60,
+}
+
 describe('GET /events/:id/activitys', () => {
   it('lista seções do evento com 200', async () => {
+    vi.mocked(activityRepository.findByEventId).mockResolvedValue([MOCK_ACTIVITY])
+
     const res = await app.inject({ method: 'GET', url: '/events/evt_01hw/activitys', headers: auth() })
 
     expect(res.statusCode).toBe(200)
@@ -574,6 +612,118 @@ describe('GET /events/:id/activitys', () => {
     expect(body[0]).toHaveProperty('id_activity')
     expect(body[0]).toHaveProperty('workload_minutes')
     expect(body[0].created_by).toBe(TEST_USER_ID)
+  })
+})
+
+describe('POST /events/:id/activitys', () => {
+  it('cria atividade e retorna 201', async () => {
+    vi.mocked(activityRepository.create).mockResolvedValue(MOCK_ACTIVITY)
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/events/evt_01hw/activitys',
+      headers: auth(),
+      payload: validActivityPayload,
+    })
+
+    expect(res.statusCode).toBe(201)
+    expect(res.json().id_activity).toBe('act_001')
+    expect(vi.mocked(activityRepository.create)).toHaveBeenCalledWith(
+      expect.objectContaining({ event_id: 'evt_01hw', created_by: TEST_USER_ID }),
+    )
+  })
+
+  it('rejeita body sem campos obrigatórios → 400', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/events/evt_01hw/activitys',
+      headers: auth(),
+      payload: { title_activity: 'Incompleto' },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+})
+
+describe('PUT /events/:id/activitys/:activityId', () => {
+  it('atualiza atividade completa e retorna 200', async () => {
+    vi.mocked(activityRepository.update).mockResolvedValue(MOCK_ACTIVITY)
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/events/evt_01hw/activitys/act_001',
+      headers: auth(),
+      payload: validActivityPayload,
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().id_activity).toBe('act_001')
+  })
+
+  it('atividade não encontrada → 404', async () => {
+    vi.mocked(activityRepository.update).mockResolvedValue(null)
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/events/evt_01hw/activitys/naoexiste',
+      headers: auth(),
+      payload: validActivityPayload,
+    })
+    expect(res.statusCode).toBe(404)
+  })
+})
+
+describe('PATCH /events/:id/activitys/:activityId', () => {
+  it('atualiza atividade parcialmente e retorna 200', async () => {
+    vi.mocked(activityRepository.partialUpdate).mockResolvedValue(MOCK_ACTIVITY)
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/events/evt_01hw/activitys/act_001',
+      headers: auth(),
+      payload: { title_activity: 'Novo título' },
+    })
+
+    expect(res.statusCode).toBe(200)
+  })
+
+  it('atividade não encontrada → 404', async () => {
+    vi.mocked(activityRepository.partialUpdate).mockResolvedValue(null)
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/events/evt_01hw/activitys/naoexiste',
+      headers: auth(),
+      payload: { title_activity: 'X' },
+    })
+    expect(res.statusCode).toBe(404)
+  })
+})
+
+describe('DELETE /events/:id/activitys/:activityId', () => {
+  it('soft delete de atividade e retorna 200', async () => {
+    const deleted = { ...MOCK_ACTIVITY, deleted_at: '2026-06-07T00:00:00.000Z', deleted_by: TEST_USER_ID }
+    vi.mocked(activityRepository.softDelete).mockResolvedValue(deleted)
+
+    const res = await app.inject({
+      method: 'DELETE',
+      url: '/events/evt_01hw/activitys/act_001',
+      headers: auth(),
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().deleted_by).toBe(TEST_USER_ID)
+    expect(vi.mocked(activityRepository.softDelete)).toHaveBeenCalledWith('act_001', TEST_USER_ID)
+  })
+
+  it('atividade não encontrada → 404', async () => {
+    vi.mocked(activityRepository.softDelete).mockResolvedValue(null)
+
+    const res = await app.inject({
+      method: 'DELETE',
+      url: '/events/evt_01hw/activitys/naoexiste',
+      headers: auth(),
+    })
+    expect(res.statusCode).toBe(404)
   })
 })
 

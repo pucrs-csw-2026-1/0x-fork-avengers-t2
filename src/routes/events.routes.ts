@@ -1,57 +1,16 @@
 import { Type } from '@sinclair/typebox'
 import type { FastifyInstance } from 'fastify'
 import type { Event, CreateEventBody, UpdateEvent } from '../schemas/event.schema.js'
-import type { Activity } from '../schemas/activity.schema.js'
+import type { CreateActivityBody, UpdateActivity } from '../schemas/activity.schema.js'
 import type { EventRole } from '../schemas/event-role.schema.js'
 import type { EventsMetrics } from '../schemas/metrics.schema.js'
 import { eventRepository } from '../repositories/event.repository.js'
+import { activityRepository } from '../repositories/activity.repository.js'
 import { requireScope } from '../plugins/auth.plugin.js'
 import { roleRepository } from '../repositories/role.repository.js'
 
-const MOCK_EVENT: Omit<Event, 'created_by'> = {
-  id: 'evt_01hw',
-  title: 'Inteligência Artificial na Prática',
-  description: 'Descrição do evento.',
-  starts_at: '2026-06-15T19:00:00-03:00',
-  ends_at: '2026-06-15T21:00:00-03:00',
-  timezone: 'America/Sao_Paulo',
-  registration_deadline: '2026-06-14T23:59:00-03:00',
-  location: {
-    venue: 'Auditório PUCRS',
-    address: 'Av. Ipiranga, 6681',
-    city: 'Porto Alegre',
-    state: 'RS',
-    country: 'BR',
-  },
-  capacity: 200,
-  category: 'tecnologia',
-  language: 'pt-BR',
-  created_at: '2026-05-01T10:00:00Z',
-  updated_at: '2026-05-10T08:30:00Z',
-  deleted_at: null,
-  deleted_by: null,
-}
-
-const MOCK_SECTION: Omit<Activity, 'created_by'> = {
-  id_activity: 'sec_01hw',
-  title_activity: 'Introdução à IA',
-  description_activity: 'Seção introdutória.',
-  type: 'palestra',
-  starts_at: '2026-06-15T19:00:00-03:00',
-  ends_at: '2026-06-15T20:00:00-03:00',
-  timezone: 'America/Sao_Paulo',
-  thumbnail_url: 'https://example.com/thumb.jpg',
-  capacity_activity: 200,
-  workload_minutes: 60,
-  category_activity: 'tecnologia',
-  language_activity: 'pt-BR',
-  created_at: '2026-05-01T10:00:00Z',
-  updated_at: '2026-05-10T08:30:00Z',
-  deleted_at: null,
-  deleted_by: null,
-}
-
 const ParamsIdSchema = Type.Object({ id: Type.String() })
+const ParamsActivitySchema = Type.Object({ id: Type.String(), activityId: Type.String() })
 
 export async function eventsRoutes(fastify: FastifyInstance) {
   fastify.post('/events', {
@@ -197,7 +156,88 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       params: ParamsIdSchema,
       response: { 200: { type: 'array', items: { $ref: 'Activity#' } } },
     },
-    handler: async (req) => [{ ...MOCK_SECTION, created_by: req.user.id }],
+    handler: async (req) => {
+      const { id } = req.params as { id: string }
+      return activityRepository.findByEventId(id)
+    },
+  })
+
+  fastify.post('/events/:id/activitys', {
+    preHandler: requireScope('manager'),
+    schema: {
+      tags: ['Activitys'],
+      summary: 'Cria atividade no evento',
+      params: ParamsIdSchema,
+      body: { $ref: 'CreateActivityBody#' },
+      response: { 201: { $ref: 'Activity#' } },
+    },
+    handler: async (req, reply) => {
+      const { id } = req.params as { id: string }
+      const body = req.body as CreateActivityBody
+      const activity = await activityRepository.create({ ...body, event_id: id, created_by: req.user.id })
+      return reply.status(201).send(activity)
+    },
+  })
+
+  fastify.put('/events/:id/activitys/:activityId', {
+    preHandler: requireScope('manager'),
+    schema: {
+      tags: ['Activitys'],
+      summary: 'Atualiza atividade completa',
+      params: ParamsActivitySchema,
+      body: { $ref: 'CreateActivityBody#' },
+      response: {
+        200: { $ref: 'Activity#' },
+        404: Type.Object({ error: Type.String() }),
+      },
+    },
+    handler: async (req, reply) => {
+      const { activityId } = req.params as { id: string; activityId: string }
+      const body = req.body as CreateActivityBody
+      const activity = await activityRepository.update(activityId, { ...body, created_by: req.user.id })
+      if (!activity) return reply.status(404).send({ error: 'Atividade não encontrada' })
+      return reply.send(activity)
+    },
+  })
+
+  fastify.patch('/events/:id/activitys/:activityId', {
+    preHandler: requireScope('manager'),
+    schema: {
+      tags: ['Activitys'],
+      summary: 'Atualiza atividade parcialmente',
+      params: ParamsActivitySchema,
+      body: { $ref: 'UpdateActivity#' },
+      response: {
+        200: { $ref: 'Activity#' },
+        404: Type.Object({ error: Type.String() }),
+      },
+    },
+    handler: async (req, reply) => {
+      const { activityId } = req.params as { id: string; activityId: string }
+      const body = req.body as UpdateActivity
+      const activity = await activityRepository.partialUpdate(activityId, body)
+      if (!activity) return reply.status(404).send({ error: 'Atividade não encontrada' })
+      return reply.send(activity)
+    },
+  })
+
+  fastify.delete('/events/:id/activitys/:activityId', {
+    preHandler: requireScope('manager'),
+    schema: {
+      tags: ['Activitys'],
+      summary: 'Soft delete de atividade',
+      params: ParamsActivitySchema,
+      response: {
+        200: { $ref: 'Activity#' },
+        404: Type.Object({ error: Type.String() }),
+      },
+    },
+    handler: async (req, reply) => {
+      const { activityId } = req.params as { id: string; activityId: string }
+      const activity = await activityRepository.softDelete(activityId, req.user.id)
+      if (!activity) return reply.status(404).send({ error: 'Atividade não encontrada' })
+      return reply.send(activity)
+    },
   })
 
   fastify.get('/events/:id/roles', {

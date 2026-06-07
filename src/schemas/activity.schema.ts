@@ -1,5 +1,28 @@
 import { Type, Static } from '@sinclair/typebox'
 
+export const CreateActivityBodySchema = Type.Object(
+  {
+    title_activity: Type.String(),
+    description_activity: Type.Optional(Type.String()),
+    type: Type.String({ examples: ['palestra', 'workshop', 'mesa_redonda'] }),
+    starts_at: Type.String({ format: 'date-time' }),
+    ends_at: Type.String({ format: 'date-time' }),
+    timezone: Type.String({ examples: ['America/Sao_Paulo'] }),
+    registration_deadline_activity: Type.Optional(Type.String({ format: 'date-time' })),
+    thumbnail_url: Type.Optional(Type.String({ format: 'uri' })),
+    capacity_activity: Type.Optional(Type.Integer({ minimum: 1 })),
+    workload_minutes: Type.Integer({ minimum: 1 }),
+    category_activity: Type.Optional(Type.String()),
+    language_activity: Type.Optional(Type.String({ examples: ['pt-BR'] })),
+  },
+  { $id: 'CreateActivityBody' },
+)
+
+export const UpdateActivitySchema = Type.Partial(CreateActivityBodySchema, { $id: 'UpdateActivity' })
+
+export type CreateActivityBody = Static<typeof CreateActivityBodySchema>
+export type UpdateActivity = Static<typeof UpdateActivitySchema>
+
 export const ActivitySchema = Type.Object(
   {
     id_activity: Type.String({ examples: ['sec_01hw'] }),
