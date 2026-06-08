@@ -49,6 +49,10 @@ export const CreateEventSchema = Type.Object(
 
 export const UpdateEventSchema = Type.Partial(CreateEventSchema, { $id: 'UpdateEvent' })
 
+// Body schema for POST /events — created_by comes from the JWT, not the request body
+export const CreateEventBodySchema = Type.Omit(CreateEventSchema, ['created_by'], { $id: 'CreateEventBody' })
+export type CreateEventBody = Static<typeof CreateEventBodySchema>
+
 export const EventListResponseSchema = Type.Object(
   {
     data: Type.Array(EventSchema),
