@@ -310,7 +310,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       tags: ['Roles'],
       summary: 'Remove role do evento',
       params: Type.Object({ id: Type.String(), role: Type.String() }),
-      response: { 204: Type.Null() },
+      response: { 204: Type.Null(), 404: Type.Object({ error: Type.String() }) },
     },
     handler: async (req, reply): Promise<void> => {
       const { id, role } = req.params as { id: string; role: string }

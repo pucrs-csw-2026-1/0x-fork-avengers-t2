@@ -289,7 +289,7 @@ describe('auth plugin', () => {
 function buildScopeApp(userScopes: string[]): FastifyInstance {
   const app = Fastify({ logger: false })
 
-  app.decorateRequest('user', null)
+  app.decorateRequest('user', { getter() { return { id: '', scopes: [] as string[], principalType: 'user' as const } } })
   app.addHook('onRequest', async (req: FastifyRequest) => {
     req.user = { id: 'usr_test', scopes: userScopes, principalType: 'user' }
   })

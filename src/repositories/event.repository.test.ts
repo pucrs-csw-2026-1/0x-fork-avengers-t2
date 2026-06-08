@@ -64,14 +64,12 @@ const createInput = {
 function mockInsertChain(row: typeof mockRow) {
   const returning = vi.fn().mockResolvedValue([row])
   const values = vi.fn().mockReturnValue({ returning })
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(db.insert).mockReturnValue({ values } as any)
 }
 
 function mockSelectWhereChain(result: unknown[]) {
   const where = vi.fn().mockResolvedValue(result)
   const from = vi.fn().mockReturnValue({ where })
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(db.select).mockReturnValue({ from } as any)
 }
 
@@ -79,7 +77,6 @@ function mockUpdateChain(rows: unknown[]) {
   const returning = vi.fn().mockResolvedValue(rows)
   const where = vi.fn().mockReturnValue({ returning })
   const set = vi.fn().mockReturnValue({ where })
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(db.update).mockReturnValue({ set } as any)
   return { set }
 }
@@ -140,9 +137,7 @@ describe('findAll', () => {
     const dataWhere = vi.fn().mockReturnValue({ limit })
     const dataFrom = vi.fn().mockReturnValue({ where: dataWhere })
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(db.select).mockReturnValueOnce({ from: countFrom } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(db.select).mockReturnValueOnce({ from: dataFrom } as any)
 
     const result = await eventRepository.findAll({ page: 1, limit: 20 })
@@ -163,9 +158,7 @@ describe('findAll', () => {
     const dataWhere = vi.fn().mockReturnValue({ limit: mockLimit })
     const dataFrom = vi.fn().mockReturnValue({ where: dataWhere })
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(db.select).mockReturnValueOnce({ from: countFrom } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(db.select).mockReturnValueOnce({ from: dataFrom } as any)
 
     await eventRepository.findAll({ page: 2, limit: 5 })
