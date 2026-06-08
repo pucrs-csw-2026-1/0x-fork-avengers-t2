@@ -944,5 +944,302 @@
     },
     "role": "assistant",
     "content": "27 issues abertas, hierarquia correta. Aqui está o resumo completo:\n\n---\n\n## Resumo das Issues Criadas\n\n### `priority: critical` — deve ser feito primeiro\n\n| # | Tipo | Título | Bloqueia |\n|---|------|--------|----------|\n| **#1** | infra | [PAI] Configurar infraestrutura de banco e ambiente | #7, #15, #20, #25 |\n| #2 | infra | ↳ Configurar ORM (Drizzle/Prisma + PostgreSQL) | #9, #16, #21 |\n| #3 | infra | ↳ Configurar variáveis de ambiente (.env + validação) | #26 |\n| #4 | infra | ↳ Criar migrations (tabelas events, activities, roles) | #9, #16, #21 |\n| **#5** | backend | [PAI] Integrar contexto de usuário via microserviço de auth | #10, #14, #18, #19 |\n| #6 | backend | ↳ Extrair user ID do header propagado pelo API Gateway | #10, #14, #18, #19 |\n\n---\n\n### `priority: high` — paralelo após infra estar pronta\n\n| # | Tipo | Título | Bloqueado por | Bloqueia |\n|---|------|--------|--------------|----------|\n| **#7** | backend | [PAI] CRUD real de Eventos | #1, #4, #5 | #15, #20, #25 |\n| #9 | data | ↳ EventRepository | #4 | #10–#14 |\n| #10 | backend | ↳ POST /events | #9, #6 | — |\n| #11 | backend | ↳ GET /events *(consome pelo Registration Service)* | #9 | — |\n| #12 | backend | ↳ GET /events/:id | #9 | #17, #22, #23 |\n| #13 | backend | ↳ PUT + PATCH /events/:id | #9, #12 | — |\n| #14 | backend | ↳ DELETE /events/:id (soft delete) | #9, #6 | — |\n| **#15** | backend | [PAI] CRUD real de Atividades *(Certificates usa section_id)* | #7 | #25 |\n| #16 | data | ↳ ActivityRepository | #4 | #17–#19 |\n| #17 | backend | ↳ GET /events/:id/activitys | #16, #12 | — |\n| #18 | backend | ↳ POST /events/:id/activitys | #16, #12, #6 | — |\n| #19 | backend | ↳ PUT + PATCH + DELETE /events/:id/activitys/:activityId | #16, #6 | — |\n\n---\n\n### `priority: medium` — após CRUD de Eventos estar implementado\n\n| # | Tipo | Título | Bloqueado por | Bloqueia |\n|---|------|--------|--------------|----------|\n| **#20** | backend | [PAI] Persistência real de Roles | #7 | — |\n| #21 | data | ↳ RoleRepository | #4 | #22–#24 |\n| #22 | backend | ↳ GET /events/:id/roles | #21, #12 | — |\n| #23 | backend | ↳ POST /events/:id/roles | #21, #12 | — |\n| #24 | backend | ↳ DELETE /events/:id/roles/:role | #21 | — |\n| **#25** | data | [PAI] Métricas reais (GET /events/metrics) | #7, #15 | — |\n| #26 | backend | ↳ Cliente HTTP para Registration Service | #3 | #27 |\n| #27 | data | ↳ Cálculo real de métricas (banco + Registration) | #9, #16, #26 | — |\n\n---\n\n### `priority: low` — melhoria, não bloqueia nada\n\n| # | Tipo | Título | Bloqueado por |\n|---|------|--------|--------------|\n| #28 | infra | Storage real para thumbnail_url das atividades | #15 |\n\n---\n\n**Ajuste de escopo vs. os outros microserviços:**\n- `GET /events` (#11) deve retornar dados reais pois o **Registration Service** o consome para filtrar eventos disponíveis\n- `total_enrolled`/`total_available_spots` (#27) virão do **Registration Service** via cliente HTTP (#26) — não é responsabilidade deste serviço rastrear inscrições\n- `section_id` no **Certificates Service** mapeia diretamente para `id_activity` — logo #15/#16 são `priority: high`, não medium"
+  },
+  {
+    "timestamp": "2026-05-26T20:40:58.799Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "user",
+    "content": "implemente o boilerplate desse projeto completo"
+  },
+  {
+    "timestamp": "2026-05-26T20:41:00.820Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Vou explorar a estrutura do projeto antes de implementar o boilerplate."
+  },
+  {
+    "timestamp": "2026-05-26T20:41:39.523Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "O projeto tem todos os arquivos já criados. O que está faltando são os testes — o Vitest está configurado mas não há nenhum arquivo de teste. Vou implementar o test suite completo para os 11 endpoints."
+  },
+  {
+    "timestamp": "2026-05-26T20:44:05.653Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "18/18 testes passando."
+  },
+  {
+    "timestamp": "2026-05-26T20:44:11.081Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Boilerplate completo. O projeto já tinha schemas, plugins e rotas implementados — o que estava faltando eram os testes. Criei dois arquivos:\n\n- [src/test/app.ts](src/test/app.ts) — helper que instancia o Fastify com todos os plugins/rotas para uso nos testes\n- [src/routes/events.routes.test.ts](src/routes/events.routes.test.ts) — 18 testes cobrindo todos os 11 endpoints, incluindo casos de body inválido (400), paginação e soft delete"
+  },
+  {
+    "timestamp": "2026-05-26T20:53:05.880Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "user",
+    "content": "Analise este repositório e identifique tudo que está mockado ou simulado (dados falsos, stubs, funções hardcoded, serviços fake, etc).\n\nAntes de criar as issues, garanta que os seguintes labels existem no repositório — crie os que faltarem com gh label create:\n\nLabels de prioridade:\n  • priority: critical\n  • priority: high\n  • priority: medium\n  • priority: low\n\nLabels de tipo:\n  • type: backend\n  • type: frontend\n  • type: infra\n  • type: data\n\n---\n\nPara cada funcionalidade real a ser implementada, crie uma issue pai no GitHub via CLI (gh issue create) representando o tema ou módulo. Dentro de cada issue pai, crie sub-issues vinculadas para cada tarefa granular necessária, usando o campo de sub-issues do GitHub (gh issue create --body com referência à issue pai via tasklist, ou via a API de sub-issues se disponível no plano).\n\nCada issue (pai e sub-issue) deve conter:\n- Título claro descrevendo o que precisa ser implementado\n- Descrição com contexto: qual arquivo/função está mockado e o que a implementação real deve fazer\n- Um label de prioridade:\n  • priority: critical — bloqueante, deve ser feito primeiro\n  • priority: high — alta prioridade, mas não bloqueante\n  • priority: medium — pode aguardar as anteriores\n  • priority: low — melhorias ou itens opcionais\n- Um label de tipo (type: backend, type: frontend, type: infra ou type: data) de acordo com a natureza da implementação\n- Dependências explícitas no corpo da issue: se ela bloqueia outras, liste Blocks #N para cada issue bloqueada; se ela é bloqueada por outra, liste Blocked by #N\n\nRegras para definir prioridade:\n- Issues que podem ser desenvolvidas em paralelo devem ter o mesmo nível de prioridade\n- Issues com dependências entre si devem ter prioridades diferentes, refletindo a ordem de execução\n- Se uma implementação desbloqueia outras, ela tem prioridade maior\n- Sub-issues herdam no mínimo a prioridade da issue pai, podendo ser maior se forem bloqueantes\n\nAo final, liste um resumo com todas as issues criadas agrupadas por nível de prioridade, indicando a hierarquia pai → sub-issues, os tipos envolvidos e quais bloqueiam quais."
+  },
+  {
+    "timestamp": "2026-05-26T20:53:09.818Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Vou explorar o repositório em detalhes antes de criar qualquer issue."
+  },
+  {
+    "timestamp": "2026-05-26T20:55:11.564Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Análise completa. Agora vou verificar os labels existentes e criar os que faltam, depois criar todas as issues."
+  },
+  {
+    "timestamp": "2026-05-26T20:55:20.985Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Nenhum dos labels necessários existe. Vou criar todos em paralelo."
+  },
+  {
+    "timestamp": "2026-05-26T20:56:16.897Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Labels criados. Agora vou criar as issues em sequência para poder referenciar os números corretamente. Começando pelas issues pai de mais alta prioridade."
+  },
+  {
+    "timestamp": "2026-05-26T20:58:05.059Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "user",
+    "content": "[Request interrupted by user for tool use]"
+  },
+  {
+    "timestamp": "2026-05-26T20:58:16.522Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "user",
+    "content": "a autenticação vai ser realizada por outro microserviço"
+  },
+  {
+    "timestamp": "2026-05-26T20:58:27.177Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Entendido. Vou atualizar a issue #5 para refletir a integração com o microserviço externo de auth, e criar a sub-issue correta antes de continuar."
+  },
+  {
+    "timestamp": "2026-05-26T20:58:56.540Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Agora continuo com as issues de CRUD de eventos."
+  },
+  {
+    "timestamp": "2026-05-26T21:00:37.024Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "user",
+    "content": "[Request interrupted by user for tool use]"
+  },
+  {
+    "timestamp": "2026-05-26T21:01:25.272Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "user",
+    "content": "esses 3 arquivos sao specs openapi dos outros microserviços. veja se algum microserviço ja criado tem a ver com isso, e tb veja se as issues futuras nao vao mudar por causa desses microservicos"
+  },
+  {
+    "timestamp": "2026-05-26T21:02:00.557Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Vou olhar o código do repositório atual e cruzar com os contratos dos outros microserviços antes de criar mais issues."
+  },
+  {
+    "timestamp": "2026-05-26T21:02:57.797Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Agora tenho o quadro completo. Deixa eu sintetizar o que muda com os outros microserviços antes de continuar:\n\n**Insights dos contratos OpenAPI:**\n\n1. **Registration Service** consome `GET /events` deste serviço para listar eventos disponíveis (filtra por capacidade e prazo). Os campos `capacity`, `registration_deadline` e `ends_at` são críticos para ele.\n\n2. **`total_enrolled` / `total_available_spots`** em `GET /events/metrics` **não podem vir deste serviço** — quem tem dados de inscrição é o Registration Service. Logo, a implementação de métricas precisa de um **cliente HTTP para chamar o Registration**.\n\n3. **`section_id`** no Certificates API mapeia para `id_activity` deste serviço. As atividades precisam de **CRUD completo** (hoje só existe GET), porque o Certificates depende de IDs reais de atividades com `workload_minutes` para emitir certificados.\n\n4. **Roles** (student, professor) são usados pelo Registration para controlar quem pode se inscrever. O módulo de roles precisa persistir dados reais.\n\n5. A issue de auth (#5/#6) permanece igual — o header vem do API Gateway, não muda.\n\nContinuando a criação das issues com esse contexto:"
+  },
+  {
+    "timestamp": "2026-05-26T21:03:36.068Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "O número foi #8 — preciso verificar o que está em #7 (issue criada antes da interrupção)."
+  },
+  {
+    "timestamp": "2026-05-26T21:03:46.232Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "O #7 é a versão antiga sem o contexto dos microserviços, e #8 ficou duplicado. Vou atualizar #7 e fechar #8."
+  },
+  {
+    "timestamp": "2026-05-26T21:04:11.215Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Agora crio todas as sub-issues de CRUD de Eventos em paralelo para ganhar tempo."
+  },
+  {
+    "timestamp": "2026-05-26T21:05:44.406Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Agora o módulo de Atividades — crítico porque o Certificates Service usa `section_id`."
+  },
+  {
+    "timestamp": "2026-05-26T21:06:42.873Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Agora o módulo de Roles:"
+  },
+  {
+    "timestamp": "2026-05-26T21:07:40.014Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Agora o módulo de Métricas — que precisa chamar o Registration Service:"
+  },
+  {
+    "timestamp": "2026-05-26T21:08:23.531Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Por fim, a issue de baixa prioridade sobre storage de imagem para `thumbnail_url`:"
+  },
+  {
+    "timestamp": "2026-05-26T21:08:38.789Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "Todas as issues criadas. Vou verificar o estado final:"
+  },
+  {
+    "timestamp": "2026-05-26T21:09:05.821Z",
+    "source": "claude",
+    "git_branch": "dev",
+    "git_user_name": "guilherme-messer",
+    "call_context": {
+      "cwd": "/home/gui/avengers-t2"
+    },
+    "role": "assistant",
+    "content": "27 issues abertas, hierarquia correta. Aqui está o resumo completo:\n\n---\n\n## Resumo das Issues Criadas\n\n### `priority: critical` — deve ser feito primeiro\n\n| # | Tipo | Título | Bloqueia |\n|---|------|--------|----------|\n| **#1** | infra | [PAI] Configurar infraestrutura de banco e ambiente | #7, #15, #20, #25 |\n| #2 | infra | ↳ Configurar ORM (Drizzle/Prisma + PostgreSQL) | #9, #16, #21 |\n| #3 | infra | ↳ Configurar variáveis de ambiente (.env + validação) | #26 |\n| #4 | infra | ↳ Criar migrations (tabelas events, activities, roles) | #9, #16, #21 |\n| **#5** | backend | [PAI] Integrar contexto de usuário via microserviço de auth | #10, #14, #18, #19 |\n| #6 | backend | ↳ Extrair user ID do header propagado pelo API Gateway | #10, #14, #18, #19 |\n\n---\n\n### `priority: high` — paralelo após infra estar pronta\n\n| # | Tipo | Título | Bloqueado por | Bloqueia |\n|---|------|--------|--------------|----------|\n| **#7** | backend | [PAI] CRUD real de Eventos | #1, #4, #5 | #15, #20, #25 |\n| #9 | data | ↳ EventRepository | #4 | #10–#14 |\n| #10 | backend | ↳ POST /events | #9, #6 | — |\n| #11 | backend | ↳ GET /events *(consome pelo Registration Service)* | #9 | — |\n| #12 | backend | ↳ GET /events/:id | #9 | #17, #22, #23 |\n| #13 | backend | ↳ PUT + PATCH /events/:id | #9, #12 | — |\n| #14 | backend | ↳ DELETE /events/:id (soft delete) | #9, #6 | — |\n| **#15** | backend | [PAI] CRUD real de Atividades *(Certificates usa section_id)* | #7 | #25 |\n| #16 | data | ↳ ActivityRepository | #4 | #17–#19 |\n| #17 | backend | ↳ GET /events/:id/activitys | #16, #12 | — |\n| #18 | backend | ↳ POST /events/:id/activitys | #16, #12, #6 | — |\n| #19 | backend | ↳ PUT + PATCH + DELETE /events/:id/activitys/:activityId | #16, #6 | — |\n\n---\n\n### `priority: medium` — após CRUD de Eventos estar implementado\n\n| # | Tipo | Título | Bloqueado por | Bloqueia |\n|---|------|--------|--------------|----------|\n| **#20** | backend | [PAI] Persistência real de Roles | #7 | — |\n| #21 | data | ↳ RoleRepository | #4 | #22–#24 |\n| #22 | backend | ↳ GET /events/:id/roles | #21, #12 | — |\n| #23 | backend | ↳ POST /events/:id/roles | #21, #12 | — |\n| #24 | backend | ↳ DELETE /events/:id/roles/:role | #21 | — |\n| **#25** | data | [PAI] Métricas reais (GET /events/metrics) | #7, #15 | — |\n| #26 | backend | ↳ Cliente HTTP para Registration Service | #3 | #27 |\n| #27 | data | ↳ Cálculo real de métricas (banco + Registration) | #9, #16, #26 | — |\n\n---\n\n### `priority: low` — melhoria, não bloqueia nada\n\n| # | Tipo | Título | Bloqueado por |\n|---|------|--------|--------------|\n| #28 | infra | Storage real para thumbnail_url das atividades | #15 |\n\n---\n\n**Ajuste de escopo vs. os outros microserviços:**\n- `GET /events` (#11) deve retornar dados reais pois o **Registration Service** o consome para filtrar eventos disponíveis\n- `total_enrolled`/`total_available_spots` (#27) virão do **Registration Service** via cliente HTTP (#26) — não é responsabilidade deste serviço rastrear inscrições\n- `section_id` no **Certificates Service** mapeia diretamente para `id_activity` — logo #15/#16 são `priority: high`, não medium"
   }
 ]
