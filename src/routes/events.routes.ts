@@ -1,6 +1,6 @@
 import { Type } from '@sinclair/typebox'
 import type { FastifyInstance } from 'fastify'
-import type { Event, CreateEventBody, UpdateEvent } from '../schemas/event.schema.js'
+import type { CreateEventBody, UpdateEvent } from '../schemas/event.schema.js'
 import type { CreateActivityBody, UpdateActivity } from '../schemas/activity.schema.js'
 import type { EventRole } from '../schemas/event-role.schema.js'
 import type { EventsMetrics } from '../schemas/metrics.schema.js'
