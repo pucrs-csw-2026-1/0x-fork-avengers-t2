@@ -23,6 +23,8 @@ function getJwks(): ReturnType<typeof createRemoteJWKSet> {
 
 async function authPlugin(fastify: FastifyInstance): Promise<void> {
   fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (request.url.startsWith('/docs')) return
+
     const authHeader = request.headers.authorization
 
     if (!authHeader?.startsWith('Bearer ')) {

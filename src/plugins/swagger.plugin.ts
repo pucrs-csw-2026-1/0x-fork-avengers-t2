@@ -23,6 +23,16 @@ export default fp(async function swaggerPlugin(fastify: FastifyInstance) {
         { name: 'Roles', description: 'Roles de matrícula por evento' },
         { name: 'Metrics', description: 'Métricas de ocupação e seções' },
       ],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
+        },
+      },
+      security: [{ bearerAuth: [] }],
     },
   })
 
