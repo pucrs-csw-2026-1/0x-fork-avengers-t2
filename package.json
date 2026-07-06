@@ -9,13 +9,12 @@
     "lint": "eslint src",
     "test": "vitest run",
     "generate-spec": "tsx scripts/generate-spec.ts",
-    "db:up": "docker compose up -d",
-    "db:down": "docker compose down",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@aws-sdk/client-sns": "^3.1079.0",
     "@fastify/swagger": "^9.0.0",
     "@fastify/swagger-ui": "^5.0.0",
     "@sinclair/typebox": "^0.34.0",

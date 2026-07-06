@@ -10,6 +10,7 @@ import { metricsRepository } from '../repositories/metrics.repository.js'
 import { requireScope } from '../plugins/auth.plugin.js'
 import { roleRepository } from '../repositories/role.repository.js'
 import { registrationClient } from '../clients/registration.client.js'
+import { snsClient } from '../clients/sns.client.js'
 
 const ParamsIdSchema = Type.Object({ id: Type.String() })
 const ParamsActivitySchema = Type.Object({ id: Type.String(), activityId: Type.String() })
@@ -26,6 +27,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
     handler: async (req, reply) => {
       const body = req.body as CreateEventBody
       const event = await eventRepository.create({ ...body, created_by: req.user.id })
+      void snsClient.publishEventCreated(event.id, event.id)
       return reply.status(201).send(event)
     },
   })
@@ -114,6 +116,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       if (!event) {
         return reply.status(404).send({ error: 'Evento não encontrado' })
       }
+      void snsClient.publishEventUpdated(event.id, event.id)
       return reply.send(event)
     },
   })
@@ -137,6 +140,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       if (!event) {
         return reply.status(404).send({ error: 'Evento não encontrado' })
       }
+      void snsClient.publishEventUpdated(event.id, event.id)
       return reply.send(event)
     },
   })
@@ -154,6 +158,9 @@ export async function eventsRoutes(fastify: FastifyInstance) {
     },
     handler: async (req, reply) => {
       const { id } = req.params as { id: string }
+      // Sem coluna `status` no schema e sem handler confirmado para
+      // EventStatusChanged no consumidor (risco de DLQ/UnknownEventTypeError):
+      // nenhum evento de domínio é publicado neste soft-delete por ora.
       const event = await eventRepository.softDelete(id, req.user.id)
       if (!event) {
         return reply.status(404).send({ error: 'Evento não encontrado' })
@@ -188,6 +195,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       const { id } = req.params as { id: string }
       const body = req.body as CreateActivityBody
       const activity = await activityRepository.create({ ...body, event_id: id, created_by: req.user.id })
+      void snsClient.publishActivityCreated(id, activity.id_activity)
       return reply.status(201).send(activity)
     },
   })
