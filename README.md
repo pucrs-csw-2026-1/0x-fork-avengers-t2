@@ -13,10 +13,11 @@ API REST para gerenciamento de eventos, atividades e matrículas, construída co
 | Testes | Vitest 2 |
 | Linting | ESLint + typescript-eslint |
 | Runtime dev | tsx |
-| Banco de dados | PostgreSQL 16 (Docker) |
+| Banco de dados | PostgreSQL 16 (RDS via Terraform, na Ministack LocalStack Pro compartilhada com `0x_t2`) |
 | ORM + Migrations | Drizzle ORM + drizzle-kit |
 | Validação de env | Zod |
 | Autenticação JWT | jose (RS256 via JWKS remoto) |
+| Eventos de domínio | SNS (`@aws-sdk/client-sns`) — tópico `eventmgmt-events` |
 
 ## Autenticação e Autorização
 
@@ -47,12 +48,64 @@ Todos os endpoints exigem um **JWT de acesso** emitido pelo serviço de autentic
 
 ---
 
+## Eventos de domínio (SNS)
+
+Mutações em eventos e atividades publicam mensagens no tópico SNS
+`eventmgmt-events` (já provisionado pelo Terraform do `0x_t2`; este fork só
+resolve o ARN via `CreateTopic`, que é idempotente). Publicação é best-effort:
+até 3 tentativas com backoff (200ms/400ms) e, se todas falharem, o erro é
+logado — nunca vira 5xx na resposta HTTP.
+
+| Ação | `event_type` publicado |
+|---|---|
+| `POST /events` | `EventCreated` |
+| `PUT` / `PATCH /events/:id` | `EventUpdated` |
+| `POST /events/:id/activitys` | `ActivityCreated` |
+| `DELETE /events/:id` (soft delete) | _(nenhum — ver nota abaixo)_ |
+
+> **Nota:** `EventStatusChanged` não é publicado neste fork. O schema de
+> `events` não tem coluna `status` — a única transição de estado existente é o
+> soft-delete (`deleted_at`/`deleted_by`) — e não há handler confirmado para
+> esse tipo no consumidor (`0x_t2`/Metrics), o que arriscaria a mensagem cair
+> na dead-letter queue (`UnknownEventTypeError`). Fica como item futuro.
+
+### ⚠️ Verificação pendente: confirmar consumo fim-a-fim (checklist do PR)
+
+A publicação no SNS foi validada isoladamente (testes unitários com
+`SNSClient` mockado — ver `src/clients/sns.client.test.ts`), mas **não foi
+confirmado que o consumidor (`0x_t2`/Metrics) processa a mensagem com
+sucesso**. Isso exige os três serviços rodando ao mesmo tempo, o que este
+ambiente de desenvolvimento não tem — precisa ser executado manualmente por
+quem tiver a stack completa de pé, **antes do merge deste PR**:
+
+- [ ] Subir os três serviços juntos: este fork, `0x_t2` (Metrics) e a Ministack
+      LocalStack Pro compartilhada (tópico `eventmgmt-events` + banco RDS).
+- [ ] Criar um evento via `POST /events` (ou Swagger UI em `/docs`) neste fork.
+- [ ] Confirmar nos logs deste fork que **não houve** `console.error` de
+      "Failed to publish domain event to SNS" (ou seja, a publicação teve sucesso).
+- [ ] Chamar o endpoint de DLQ do Metrics (`0x_t2`) com um token admin, e
+      confirmar que a mensagem **não** aparece lá — se aparecer, ela caiu na
+      dead-letter queue (`UnknownEventTypeError`) em vez de ser consumida:
+
+  ```bash
+  curl -H "Authorization: Bearer <token-admin>" \
+    http://localhost:<porta-do-metrics>/admin/dlq/messages
+  ```
+
+- [ ] Repetir o mesmo teste para `PUT`/`PATCH /events/:id` (`EventUpdated`) e
+      `POST /events/:id/activitys` (`ActivityCreated`).
+
+Enquanto esse checklist não for executado, considere a integração com o
+consumidor **não confirmada em produção**, apesar de o publisher em si estar
+testado e funcional.
+
 ## Como rodar localmente
 
 ### Pré-requisitos
 
 - Node.js 22+
-- Docker + Docker Compose
+- Terraform 1.5+
+- Ministack LocalStack Pro compartilhada com o `0x_t2` rodando em `http://localhost:4566` (ver instruções no repositório do `0x_t2`)
 - Auth Service (`0x_t1`) rodando em `http://localhost:8080`
 
 ### 1. Instalar dependências
@@ -72,17 +125,62 @@ Edite o `.env` se precisar alterar usuário, senha, porta do banco ou URL dos se
 | Variável | Descrição | Padrão |
 |---|---|---|
 | `PORT` | Porta do servidor | `3000` |
-| `DATABASE_URL` | Connection string do PostgreSQL | `postgresql://...@localhost:5432/events_db` |
+| `DATABASE_URL` | Connection string do PostgreSQL (output do Terraform, ver passo 3) | `postgresql://...@localhost:5432/events_db` |
 | `AUTH_SERVICE_URL` | URL base do Auth Service (para buscar JWKS) | `http://localhost:8080` |
 | `REGISTRATION_SERVICE_URL` | URL base do Registration Service (opcional) | _(vazio — métricas usam 0 como fallback)_ |
+| `AWS_REGION` | Região usada pelo cliente SNS/Terraform | `us-east-1` |
+| `AWS_ENDPOINT_URL` | Endpoint da Ministack LocalStack Pro | `http://localhost:4566` |
 
-### 3. Subir o banco de dados
+### 3. Provisionar o banco de dados (RDS via Terraform)
+
+O Postgres não roda mais localmente via Docker Compose — ele é provisionado como
+um RDS emulado na Ministack LocalStack Pro compartilhada com o `0x_t2`. Suba a
+Ministack (conforme instruções do `0x_t2`) antes de continuar.
 
 ```bash
-npm run db:up
+cd infra/terraform/rds
+cp terraform.tfvars.example terraform.tfvars
+# edite terraform.tfvars e defina db_password
+
+terraform init
+terraform apply
 ```
 
-Sobe um container PostgreSQL 16 na porta `5432` com volume persistente.
+Copie o output `database_url` para o `DATABASE_URL` do seu `.env`:
+
+```bash
+terraform output -raw database_url
+```
+
+> **⚠️ Limitação conhecida da Ministack: a porta no output `database_url` está
+> errada — corrija manualmente antes de usar.**
+>
+> A API RDS emulada devolve `Endpoint.Port = 5432` (confirmado chamando
+> `describe-db-instances` diretamente contra o endpoint da Ministack), que é a
+> porta **interna** do container Postgres que a Ministack sobe por trás do
+> RDS emulado — não a porta publicada no host Docker. Isso não é um bug do
+> `main.tf`/`outputs.tf` deste fork: o valor de `port` no output vem
+> corretamente de `aws_db_instance.events.port`, que por sua vez reflete
+> fielmente o que a própria API da Ministack devolveu. A limitação está na
+> tradução RDS→Docker da Ministack em si, que não expõe a porta publicada em
+> nenhum campo da API AWS (não existe outro campo, nem `DbInstancePort`, que
+> traga esse valor) — não há como automatizar essa descoberta via Terraform.
+>
+> **Workaround manual**, depois do `terraform apply`: descubra a porta real
+> publicada no host com `docker ps`/`docker port` e substitua-a na
+> `DATABASE_URL` do `.env` (mantendo host, usuário, senha e nome do banco do
+> output do Terraform):
+>
+> ```bash
+> docker ps                                        # ache o container com "postgres" na imagem,
+>                                                   # nome tipicamente ministack-rds-<identifier>
+> docker port ministack-rds-eventmgmt-events-db    # ex.: 5432/tcp -> 0.0.0.0:15432
+> ```
+>
+> Troque a porta `5432` do `database_url` copiado pela porta real reportada
+> (`15432` no exemplo acima) antes de colar em `DATABASE_URL` no `.env`. Essa
+> porta pode variar entre execuções de `terraform apply` — repita o passo
+> sempre que recriar a instância.
 
 ### 4. Aplicar as migrations
 
@@ -134,8 +232,6 @@ npm run lint           # verifica qualidade do código com ESLint
 npm run test           # roda testes com Vitest
 npm run generate-spec  # gera docs/openapi.json
 
-npm run db:up          # sobe o PostgreSQL via Docker Compose
-npm run db:down        # para e remove o container
 npm run db:generate    # gera arquivos de migration a partir do schema
 npm run db:migrate     # aplica migrations no banco
 npm run db:studio      # abre o Drizzle Studio (interface visual do banco)
