@@ -46,11 +46,20 @@ vi.mock('../clients/registration.client.js', () => ({
   },
 }))
 
+vi.mock('../clients/sns.client.js', () => ({
+  snsClient: {
+    publishEventCreated: vi.fn().mockResolvedValue(undefined),
+    publishEventUpdated: vi.fn().mockResolvedValue(undefined),
+    publishActivityCreated: vi.fn().mockResolvedValue(undefined),
+  },
+}))
+
 import { eventRepository } from '../repositories/event.repository.js'
 import { roleRepository } from '../repositories/role.repository.js'
 import { activityRepository } from '../repositories/activity.repository.js'
 import { metricsRepository } from '../repositories/metrics.repository.js'
 import { registrationClient } from '../clients/registration.client.js'
+import { snsClient } from '../clients/sns.client.js'
 
 let app: FastifyInstance
 let token: string
@@ -139,6 +148,24 @@ describe('POST /events', () => {
     expect(body).toHaveProperty('title', 'Evento Teste')
     expect(body).toHaveProperty('created_at')
     expect(vi.mocked(eventRepository.create)).toHaveBeenCalledOnce()
+    expect(vi.mocked(snsClient.publishEventCreated)).toHaveBeenCalledWith(
+      MOCK_CREATED_EVENT.id,
+      MOCK_CREATED_EVENT.id,
+    )
+  })
+
+  it('falha ao publicar no SNS não impede resposta 201', async () => {
+    vi.mocked(eventRepository.create).mockResolvedValue(MOCK_CREATED_EVENT)
+    vi.mocked(snsClient.publishEventCreated).mockRejectedValueOnce(new Error('sns indisponível'))
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/events',
+      headers: auth(),
+      payload: validPayload,
+    })
+
+    expect(res.statusCode).toBe(201)
   })
 
   it('created_by vem do token JWT, não do body', async () => {
@@ -449,6 +476,10 @@ describe('PUT /events/:id', () => {
     expect(body.id).toBe(MOCK_UPDATED_EVENT.id)
     expect(body.title).toBe('Evento Atualizado')
     expect(body.created_by).toBe(TEST_USER_ID)
+    expect(vi.mocked(snsClient.publishEventUpdated)).toHaveBeenCalledWith(
+      MOCK_UPDATED_EVENT.id,
+      MOCK_UPDATED_EVENT.id,
+    )
   })
 
   it('EventRepository.update chamado com id correto e created_by do token', async () => {
@@ -528,6 +559,10 @@ describe('PATCH /events/:id', () => {
     expect(body.id).toBe(MOCK_PATCHED_EVENT.id)
     expect(body.title).toBe('Novo Título')
     expect(body.created_by).toBe(TEST_USER_ID)
+    expect(vi.mocked(snsClient.publishEventUpdated)).toHaveBeenCalledWith(
+      MOCK_PATCHED_EVENT.id,
+      MOCK_PATCHED_EVENT.id,
+    )
   })
 
   it('EventRepository.partialUpdate chamado com id e body corretos', async () => {
@@ -601,6 +636,8 @@ describe('DELETE /events/:id', () => {
     expect(body.deleted_at).not.toBeNull()
     expect(body.deleted_by).toBe(TEST_USER_ID)
     expect(vi.mocked(eventRepository.softDelete)).toHaveBeenCalledWith('evt_01hw', TEST_USER_ID)
+    expect(vi.mocked(snsClient.publishEventCreated)).not.toHaveBeenCalled()
+    expect(vi.mocked(snsClient.publishEventUpdated)).not.toHaveBeenCalled()
   })
 
   it('evento não encontrado ou já deletado → 404', async () => {
@@ -668,6 +705,7 @@ describe('POST /events/:id/activitys', () => {
     expect(vi.mocked(activityRepository.create)).toHaveBeenCalledWith(
       expect.objectContaining({ event_id: 'evt_01hw', created_by: TEST_USER_ID }),
     )
+    expect(vi.mocked(snsClient.publishActivityCreated)).toHaveBeenCalledWith('evt_01hw', 'act_001')
   })
 
   it('rejeita body sem campos obrigatórios → 400', async () => {

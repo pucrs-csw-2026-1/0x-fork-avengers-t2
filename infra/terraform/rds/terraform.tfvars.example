@@ -1,0 +1,8 @@
+aws_region           = "us-east-1"
+localstack_endpoint  = "http://localhost:4566"
+db_name              = "events_db"
+db_username          = "events_user"
+db_password          = "CHANGE_ME"
+db_port              = 5432
+db_instance_class    = "db.t3.micro"
+db_allocated_storage = 20

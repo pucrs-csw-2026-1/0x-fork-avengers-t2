@@ -12,6 +12,8 @@ export default defineConfig({
       POSTGRES_USER: 'events_user',
       POSTGRES_PASSWORD: 'events_pass',
       POSTGRES_DB: 'events_test',
+      AWS_REGION: 'us-east-1',
+      AWS_ENDPOINT_URL: 'http://localhost:4566',
     },
   },
 })
