@@ -8,6 +8,12 @@ const LocationSchema = Type.Object({
   country: Type.Optional(Type.String({ minLength: 2, maxLength: 2 })),
 })
 
+// Ciclo de vida do evento (US-08). Alinhado ao enum do consumidor T2.
+const StatusSchema = Type.String({
+  examples: ['planejado', 'ativo', 'concluido', 'cancelado'],
+  description: 'Ciclo de vida do evento: planejado | ativo | concluido | cancelado',
+})
+
 export const EventSchema = Type.Object(
   {
     id: Type.String({ examples: ['evt_01hw'] }),
@@ -20,6 +26,7 @@ export const EventSchema = Type.Object(
     location: Type.Optional(LocationSchema),
     capacity: Type.Integer({ minimum: 1 }),
     category: Type.Optional(Type.String()),
+    status: Type.Optional(StatusSchema),
     language: Type.Optional(Type.String({ examples: ['pt-BR'] })),
     created_at: Type.String({ format: 'date-time' }),
     updated_at: Type.String({ format: 'date-time' }),
@@ -41,6 +48,7 @@ export const CreateEventSchema = Type.Object(
     location: Type.Optional(LocationSchema),
     capacity: Type.Integer({ minimum: 1 }),
     category: Type.Optional(Type.String()),
+    status: Type.Optional(StatusSchema),
     language: Type.Optional(Type.String()),
     created_by: Type.String(),
   },

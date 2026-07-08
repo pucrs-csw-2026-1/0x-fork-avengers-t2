@@ -50,6 +50,7 @@ vi.mock('../clients/sns.client.js', () => ({
   snsClient: {
     publishEventCreated: vi.fn().mockResolvedValue(undefined),
     publishEventUpdated: vi.fn().mockResolvedValue(undefined),
+    publishEventStatusChanged: vi.fn().mockResolvedValue(undefined),
     publishActivityCreated: vi.fn().mockResolvedValue(undefined),
   },
 }))
@@ -151,6 +152,7 @@ describe('POST /events', () => {
     expect(vi.mocked(snsClient.publishEventCreated)).toHaveBeenCalledWith(
       MOCK_CREATED_EVENT.id,
       MOCK_CREATED_EVENT.id,
+      expect.objectContaining({ event_id: MOCK_CREATED_EVENT.id, title: 'Evento Teste' }),
     )
   })
 
@@ -479,6 +481,7 @@ describe('PUT /events/:id', () => {
     expect(vi.mocked(snsClient.publishEventUpdated)).toHaveBeenCalledWith(
       MOCK_UPDATED_EVENT.id,
       MOCK_UPDATED_EVENT.id,
+      expect.objectContaining({ event_id: MOCK_UPDATED_EVENT.id }),
     )
   })
 
@@ -562,6 +565,7 @@ describe('PATCH /events/:id', () => {
     expect(vi.mocked(snsClient.publishEventUpdated)).toHaveBeenCalledWith(
       MOCK_PATCHED_EVENT.id,
       MOCK_PATCHED_EVENT.id,
+      expect.objectContaining({ event_id: MOCK_PATCHED_EVENT.id }),
     )
   })
 
@@ -608,6 +612,26 @@ describe('PATCH /events/:id', () => {
 
     expect(res.statusCode).toBe(200)
     expect(vi.mocked(eventRepository.partialUpdate)).toHaveBeenCalledOnce()
+  })
+
+  it('PATCH com status → publica EventStatusChanged, não EventUpdated', async () => {
+    const patched = { ...MOCK_PATCHED_EVENT, status: 'cancelado' }
+    vi.mocked(eventRepository.partialUpdate).mockResolvedValue(patched)
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/events/evt-patch-test',
+      headers: auth(),
+      payload: { status: 'cancelado' },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(vi.mocked(snsClient.publishEventStatusChanged)).toHaveBeenCalledWith(
+      'evt-patch-test',
+      'evt-patch-test',
+      expect.objectContaining({ event_id: 'evt-patch-test', status: 'cancelado' }),
+    )
+    expect(vi.mocked(snsClient.publishEventUpdated)).not.toHaveBeenCalled()
   })
 })
 
@@ -705,7 +729,11 @@ describe('POST /events/:id/activitys', () => {
     expect(vi.mocked(activityRepository.create)).toHaveBeenCalledWith(
       expect.objectContaining({ event_id: 'evt_01hw', created_by: TEST_USER_ID }),
     )
-    expect(vi.mocked(snsClient.publishActivityCreated)).toHaveBeenCalledWith('evt_01hw', 'act_001')
+    expect(vi.mocked(snsClient.publishActivityCreated)).toHaveBeenCalledWith(
+      'evt_01hw',
+      'act_001',
+      expect.objectContaining({ event_id: 'evt_01hw', activity_id: 'act_001' }),
+    )
   })
 
   it('rejeita body sem campos obrigatórios → 400', async () => {

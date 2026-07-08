@@ -1,7 +1,7 @@
 import { Type } from '@sinclair/typebox'
 import type { FastifyInstance } from 'fastify'
-import type { CreateEventBody, UpdateEvent } from '../schemas/event.schema.js'
-import type { CreateActivityBody, UpdateActivity } from '../schemas/activity.schema.js'
+import type { CreateEventBody, UpdateEvent, Event } from '../schemas/event.schema.js'
+import type { CreateActivityBody, UpdateActivity, Activity } from '../schemas/activity.schema.js'
 import type { EventRole } from '../schemas/event-role.schema.js'
 import type { EventsMetrics } from '../schemas/metrics.schema.js'
 import { eventRepository } from '../repositories/event.repository.js'
@@ -15,6 +15,36 @@ import { snsClient } from '../clients/sns.client.js'
 const ParamsIdSchema = Type.Object({ id: Type.String() })
 const ParamsActivitySchema = Type.Object({ id: Type.String(), activityId: Type.String() })
 
+// Payload de domínio (US-08, ADR-0009 do T2): vai no `data` da notificação SNS,
+// em snake_case, para o Metrics montar o #META sem consultar esta API.
+function eventData(event: Event): Record<string, unknown> {
+  return {
+    event_id: event.id,
+    title: event.title,
+    capacity: event.capacity,
+    starts_at: event.starts_at,
+    ends_at: event.ends_at,
+    timezone: event.timezone,
+    ...(event.status != null ? { status: event.status } : {}),
+    ...(event.description != null ? { description: event.description } : {}),
+    ...(event.category != null ? { category: event.category } : {}),
+    ...(event.location != null ? { location: event.location } : {}),
+  }
+}
+
+function activityData(eventId: string, activity: Activity): Record<string, unknown> {
+  return {
+    event_id: eventId,
+    activity_id: activity.id_activity,
+    title: activity.title_activity,
+    type: activity.type,
+    workload_minutes: activity.workload_minutes,
+    starts_at: activity.starts_at,
+    ends_at: activity.ends_at,
+    ...(activity.capacity_activity != null ? { capacity: activity.capacity_activity } : {}),
+  }
+}
+
 export async function eventsRoutes(fastify: FastifyInstance) {
   fastify.post('/events', {
     preHandler: requireScope('manager'),
@@ -27,7 +57,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
     handler: async (req, reply) => {
       const body = req.body as CreateEventBody
       const event = await eventRepository.create({ ...body, created_by: req.user.id })
-      void snsClient.publishEventCreated(event.id, event.id)
+      void snsClient.publishEventCreated(event.id, event.id, eventData(event))
       return reply.status(201).send(event)
     },
   })
@@ -116,7 +146,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       if (!event) {
         return reply.status(404).send({ error: 'Evento não encontrado' })
       }
-      void snsClient.publishEventUpdated(event.id, event.id)
+      void snsClient.publishEventUpdated(event.id, event.id, eventData(event))
       return reply.send(event)
     },
   })
@@ -140,7 +170,12 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       if (!event) {
         return reply.status(404).send({ error: 'Evento não encontrado' })
       }
-      void snsClient.publishEventUpdated(event.id, event.id)
+      // Transição de status → EventStatusChanged; caso contrário, EventUpdated.
+      if (body.status !== undefined) {
+        void snsClient.publishEventStatusChanged(event.id, event.id, eventData(event))
+      } else {
+        void snsClient.publishEventUpdated(event.id, event.id, eventData(event))
+      }
       return reply.send(event)
     },
   })
@@ -158,9 +193,8 @@ export async function eventsRoutes(fastify: FastifyInstance) {
     },
     handler: async (req, reply) => {
       const { id } = req.params as { id: string }
-      // Sem coluna `status` no schema e sem handler confirmado para
-      // EventStatusChanged no consumidor (risco de DLQ/UnknownEventTypeError):
-      // nenhum evento de domínio é publicado neste soft-delete por ora.
+      // Soft-delete não é uma transição de status de domínio (o status muda via
+      // PATCH, que publica EventStatusChanged). Este delete não publica evento.
       const event = await eventRepository.softDelete(id, req.user.id)
       if (!event) {
         return reply.status(404).send({ error: 'Evento não encontrado' })
@@ -195,7 +229,7 @@ export async function eventsRoutes(fastify: FastifyInstance) {
       const { id } = req.params as { id: string }
       const body = req.body as CreateActivityBody
       const activity = await activityRepository.create({ ...body, event_id: id, created_by: req.user.id })
-      void snsClient.publishActivityCreated(id, activity.id_activity)
+      void snsClient.publishActivityCreated(id, activity.id_activity, activityData(id, activity))
       return reply.status(201).send(activity)
     },
   })

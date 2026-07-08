@@ -105,11 +105,39 @@ describe('snsClient', () => {
     const { snsClient } = await loadClient()
     await snsClient.publishEventCreated('evt_1', 'evt_1')
     await snsClient.publishEventUpdated('evt_1', 'evt_1')
+    await snsClient.publishEventStatusChanged('evt_1', 'evt_1')
     await snsClient.publishActivityCreated('evt_1', 'act_1')
 
     const publishCalls = send.mock.calls.filter(([cmd]) => cmd.__type === 'Publish')
     const eventTypes = publishCalls.map(([cmd]) => JSON.parse(cmd.input.Message).event_type)
 
-    expect(eventTypes).toEqual(['EventCreated', 'EventUpdated', 'ActivityCreated'])
+    expect(eventTypes).toEqual([
+      'EventCreated',
+      'EventUpdated',
+      'EventStatusChanged',
+      'ActivityCreated',
+    ])
+  })
+
+  it('inclui version e o payload `data` no envelope (US-08)', async () => {
+    send.mockResolvedValue({ TopicArn: 'arn:aws:sns:us-east-1:000000000000:eventmgmt-events' })
+
+    const { snsClient } = await loadClient()
+    await snsClient.publishEventCreated('evt_1', 'evt_1', {
+      event_id: 'evt_1',
+      title: 'Congresso',
+      capacity: 200,
+      status: 'ativo',
+    })
+
+    const publishCall = send.mock.calls.filter(([cmd]) => cmd.__type === 'Publish')[0]
+    const envelope = JSON.parse(publishCall[0].input.Message)
+    expect(envelope.version).toBe('1.0')
+    expect(envelope.data).toMatchObject({
+      event_id: 'evt_1',
+      title: 'Congresso',
+      capacity: 200,
+      status: 'ativo',
+    })
   })
 })
