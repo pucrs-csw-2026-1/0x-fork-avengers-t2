@@ -40,8 +40,14 @@ describe('events table schema', () => {
     expect(cols.updated_at.hasDefault).toBe(true)
   })
 
+  it('status column is notNull with default (US-08)', () => {
+    expect(columnNames).toContain('status')
+    expect(cols.status.notNull).toBe(true)
+    expect(cols.status.hasDefault).toBe(true)
+  })
+
   it('has exactly the expected number of columns', () => {
-    expect(columnNames).toHaveLength(16)
+    expect(columnNames).toHaveLength(17)
   })
 })
 

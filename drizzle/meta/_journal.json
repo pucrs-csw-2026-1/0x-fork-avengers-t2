@@ -15,6 +15,13 @@
       "when": 1780763362136,
       "tag": "0001_violet_morlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783474003227,
+      "tag": "0002_giant_annihilus",
+      "breakpoints": true
     }
   ]
 }

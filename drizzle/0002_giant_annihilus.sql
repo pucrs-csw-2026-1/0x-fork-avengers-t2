@@ -1,0 +1,1 @@
+ALTER TABLE "events" ADD COLUMN "status" text DEFAULT 'planejado' NOT NULL;

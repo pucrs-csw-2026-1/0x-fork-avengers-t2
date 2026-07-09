@@ -11,6 +11,8 @@ const envSchema = z.object({
   POSTGRES_USER: z.string().optional(),
   POSTGRES_PASSWORD: z.string().optional(),
   POSTGRES_DB: z.string().optional(),
+  AWS_REGION: z.string().default('us-east-1'),
+  AWS_ENDPOINT_URL: z.string().optional(),
 })
 
 const result = envSchema.safeParse(process.env)

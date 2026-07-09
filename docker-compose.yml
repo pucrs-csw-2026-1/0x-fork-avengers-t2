@@ -1,20 +1,84 @@
-services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: events_postgres
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+# US-08: um `docker compose up` sobe o Events fork contra a Ministack
+# COMPARTILHADA (auth-infra) e o Auth T1. O Postgres é REAL, provisionado via
+# RDS da Ministack (a Ministack sobe um container postgres:16 na mesma rede,
+# `ministack-rds-eventmgmt-events-db`, alcançável por nome — sem docker-port).
+#
+# Pré-requisitos: a stack do T1 no ar (auth-infra + auth-backend na rede
+# `auth-service_default`) e a Ministack com o docker.sock montado (RDS real).
+# Ordem de subida: T1 -> T2 -> forks.
+name: events-fork
 
-volumes:
-  postgres_data:
+networks:
+  ministack:
+    name: auth-service_default
+    external: true
+
+services:
+  # Provisiona o Postgres (RDS) na Ministack compartilhada — idempotente.
+  db-setup:
+    image: hashicorp/terraform:1.9
+    working_dir: /workspace
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        ok=0
+        for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+          if wget -q -O - http://auth-infra:4566/_ministack/health >/dev/null 2>&1; then ok=1; break; fi
+          echo "aguardando a Ministack (auth-infra:4566)..."; sleep 2
+        done
+        [ "$$ok" = 1 ] || { echo "ERRO: Ministack indisponivel em auth-infra:4566 (suba o T1 antes)"; exit 1; }
+        rm -rf .terraform
+        terraform init -input=false
+        terraform apply -auto-approve -input=false
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      TF_IN_AUTOMATION: '1'
+      TF_VAR_localstack_endpoint: http://auth-infra:4566
+      TF_VAR_db_password: events_pass
+    volumes:
+      - ./infra/terraform/rds:/workspace
+    networks: [ministack]
+
+  # Aplica as migrations Drizzle no Postgres do RDS (usa o stage builder, que
+  # tem drizzle-kit + migrations). Conecta pelo NOME do container do RDS.
+  migrate:
+    build:
+      context: .
+      target: builder
+    # Espera o Postgres do RDS aceitar conexao antes de aplicar as migrations
+    # (o terraform apply retorna quando a instancia esta 'available', mas o
+    # Postgres pode levar mais alguns segundos para aceitar TCP).
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+          if node -e "require('net').connect(5432,'ministack-rds-eventmgmt-events-db').on('connect',function(){process.exit(0)}).on('error',function(){process.exit(1)})" 2>/dev/null; then break; fi
+          echo "aguardando Postgres (ministack-rds-eventmgmt-events-db:5432)..."; sleep 2
+        done
+        npm run db:migrate
+    environment:
+      DATABASE_URL: postgresql://events_user:events_pass@ministack-rds-eventmgmt-events-db:5432/events_db
+    depends_on:
+      db-setup:
+        condition: service_completed_successfully
+    networks: [ministack]
+
+  app:
+    build: .
+    container_name: events-api
+    ports:
+      - '3002:3000'
+    environment:
+      PORT: '3000'
+      HOST: 0.0.0.0
+      NODE_ENV: production
+      DATABASE_URL: postgresql://events_user:events_pass@ministack-rds-eventmgmt-events-db:5432/events_db
+      AUTH_SERVICE_URL: http://auth-backend:8080
+      AWS_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://auth-infra:4566
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [ministack]
