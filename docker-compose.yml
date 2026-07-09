@@ -78,6 +78,10 @@ services:
       AUTH_SERVICE_URL: http://auth-backend:8080
       AWS_REGION: us-east-1
       AWS_ENDPOINT_URL: http://auth-infra:4566
+      # Credenciais dummy p/ o SDK AWS v3 publicar no SNS da Ministack (o SDK
+      # exige credenciais mesmo apontando para o LocalStack).
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
     depends_on:
       migrate:
         condition: service_completed_successfully
