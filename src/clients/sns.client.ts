@@ -3,8 +3,14 @@ import { env } from '../config/env.js'
 
 const TOPIC_NAME = 'eventmgmt-events'
 const RETRY_DELAYS_MS = [200, 400]
+// Versão do envelope canônico (ADR-0009 do T2): payload de domínio em `data`.
+const ENVELOPE_VERSION = '1.0'
 
-export type DomainEventType = 'EventCreated' | 'EventUpdated' | 'ActivityCreated'
+export type DomainEventType =
+  | 'EventCreated'
+  | 'EventUpdated'
+  | 'EventStatusChanged'
+  | 'ActivityCreated'
 
 export interface DomainEventEnvelope {
   event_id: string
@@ -12,6 +18,8 @@ export interface DomainEventEnvelope {
   source: string
   occurred_at: string
   resource_ref: string
+  version: string
+  data?: Record<string, unknown>
 }
 
 let client: SNSClient | undefined
@@ -41,18 +49,30 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-function buildEnvelope(eventType: DomainEventType, eventId: string, resourceRef: string): DomainEventEnvelope {
+function buildEnvelope(
+  eventType: DomainEventType,
+  eventId: string,
+  resourceRef: string,
+  data?: Record<string, unknown>,
+): DomainEventEnvelope {
   return {
     event_id: eventId,
     event_type: eventType,
     source: TOPIC_NAME,
     occurred_at: new Date().toISOString(),
     resource_ref: resourceRef,
+    version: ENVELOPE_VERSION,
+    ...(data !== undefined ? { data } : {}),
   }
 }
 
-async function publish(eventType: DomainEventType, eventId: string, resourceRef: string): Promise<void> {
-  const envelope = buildEnvelope(eventType, eventId, resourceRef)
+async function publish(
+  eventType: DomainEventType,
+  eventId: string,
+  resourceRef: string,
+  data?: Record<string, unknown>,
+): Promise<void> {
+  const envelope = buildEnvelope(eventType, eventId, resourceRef, data)
   let lastError: unknown
 
   for (let attempt = 0; attempt < 1 + RETRY_DELAYS_MS.length; attempt++) {
@@ -74,15 +94,35 @@ async function publish(eventType: DomainEventType, eventId: string, resourceRef:
 }
 
 export const snsClient = {
-  async publishEventCreated(eventId: string, resourceRef: string): Promise<void> {
-    await publish('EventCreated', eventId, resourceRef)
+  async publishEventCreated(
+    eventId: string,
+    resourceRef: string,
+    data?: Record<string, unknown>,
+  ): Promise<void> {
+    await publish('EventCreated', eventId, resourceRef, data)
   },
 
-  async publishEventUpdated(eventId: string, resourceRef: string): Promise<void> {
-    await publish('EventUpdated', eventId, resourceRef)
+  async publishEventUpdated(
+    eventId: string,
+    resourceRef: string,
+    data?: Record<string, unknown>,
+  ): Promise<void> {
+    await publish('EventUpdated', eventId, resourceRef, data)
   },
 
-  async publishActivityCreated(eventId: string, resourceRef: string): Promise<void> {
-    await publish('ActivityCreated', eventId, resourceRef)
+  async publishEventStatusChanged(
+    eventId: string,
+    resourceRef: string,
+    data?: Record<string, unknown>,
+  ): Promise<void> {
+    await publish('EventStatusChanged', eventId, resourceRef, data)
+  },
+
+  async publishActivityCreated(
+    eventId: string,
+    resourceRef: string,
+    data?: Record<string, unknown>,
+  ): Promise<void> {
+    await publish('ActivityCreated', eventId, resourceRef, data)
   },
 }

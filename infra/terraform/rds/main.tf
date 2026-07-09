@@ -24,4 +24,12 @@ resource "aws_db_instance" "events" {
 
   publicly_accessible = true
   skip_final_snapshot = true
+
+  lifecycle {
+    # A Ministack (LocalStack) popula `max_allocated_storage` na instancia, o que
+    # gera um diff perpetuo (20 -> null) e faz o `terraform apply` de reconciliacao
+    # travar num ModifyDBInstance que o emulador nao completa. Ignorar mantem o
+    # `docker compose up` idempotente (re-apply vira no-op) sem afetar o create.
+    ignore_changes = [max_allocated_storage]
+  }
 }

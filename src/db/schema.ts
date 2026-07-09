@@ -11,6 +11,9 @@ export const events = pgTable('events', {
   location: jsonb('location'),
   capacity: integer('capacity').notNull(),
   category: text('category'),
+  // Ciclo de vida do evento (US-08): alimenta EventStatusChanged → Metrics.
+  // Valores alinhados ao enum do consumidor T2: planejado|ativo|concluido|cancelado.
+  status: text('status').default('planejado').notNull(),
   language: text('language'),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

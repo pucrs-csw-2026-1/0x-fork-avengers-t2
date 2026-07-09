@@ -19,6 +19,7 @@ function rowToEvent(row: EventRow): Event {
     ...(row.location != null ? { location: row.location as Event['location'] } : {}),
     capacity: row.capacity,
     ...(row.category != null ? { category: row.category } : {}),
+    status: row.status,
     ...(row.language != null ? { language: row.language } : {}),
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
@@ -46,6 +47,7 @@ export const eventRepository = {
         location: (data.location as unknown) ?? null,
         capacity: data.capacity,
         category: data.category ?? null,
+        ...(data.status != null ? { status: data.status } : {}),
         language: data.language ?? null,
         created_by: data.created_by,
       })
@@ -100,6 +102,7 @@ export const eventRepository = {
         location: (data.location as unknown) ?? null,
         capacity: data.capacity,
         category: data.category ?? null,
+        ...(data.status != null ? { status: data.status } : {}),
         language: data.language ?? null,
         updated_at: new Date(),
       })
@@ -129,6 +132,7 @@ export const eventRepository = {
         ...(data.location !== undefined ? { location: (data.location as unknown) ?? null } : {}),
         ...(data.capacity !== undefined ? { capacity: data.capacity } : {}),
         ...(data.category !== undefined ? { category: data.category } : {}),
+        ...(data.status !== undefined ? { status: data.status } : {}),
         ...(data.language !== undefined ? { language: data.language } : {}),
       })
       .where(and(eq(events.id, id), isNull(events.deleted_at)))
